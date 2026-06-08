@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#384832"/>
+      <stop offset="50%" stop-color="#44583c"/>
+      <stop offset="100%" stop-color="#6b8a5e"/>
+    </linearGradient>
+    <linearGradient id="leaf512" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#d1d9c7"/>
+      <stop offset="100%" stop-color="#8fa37d"/>
+    </linearGradient>
+    <linearGradient id="accent512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b3c0a4"/>
+      <stop offset="100%" stop-color="#6b8a5e"/>
+    </linearGradient>
+  </defs>
+  <!-- Fundo squircle -->
+  <rect width="512" height="512" rx="115" fill="url(#bg512)"/>
+  <!-- Elemento orgânico de fundo — folha grande -->
+  <path d="M380 110c0 0-60 25-110 80s-75 130-75 130c35-20 75-38 108-48s72-18 72-18s-12 45-38 78c-26 33-60 58-60 58" 
+    fill="none" stroke="url(#leaf512)" stroke-width="6" stroke-linecap="round" opacity="0.35"/>
+  <!-- Folha pequena decorativa -->
+  <path d="M340 380c-15 10-25 5-30-5s-2-22 8-28c10-6 20 0 24 8s6 18-2 25z" 
+    fill="url(#accent512)" opacity="0.4"/>
+  <!-- Letra A — clean, moderna, geométrica -->
+  <path d="M168 380l68-196h20l68 196h-32l-16-50h-60l-16 50h-32zm56-80h44l-22-68-22 68z" 
+    fill="white"/>
+  <!-- Ponto de destaque -->
+  <circle cx="348" cy="380" r="14" fill="url(#accent512)"/>
+</svg>

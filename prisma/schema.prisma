@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CLIENTE
+}
+
+enum TipoRefeicao {
+  CAFE_DA_MANHA
+  LANCHE_DA_MANHA
+  ALMOCO
+  LANCHE_DA_TARDE
+  JANTA
+  CEIA
+}
+
+model Usuario {
+  id             String   @id @default(cuid())
+  nome           String
+  email          String   @unique
+  senhaHash      String
+  role           Role     @default(CLIENTE)
+  telefone       String?
+  dataNascimento DateTime?
+  pesoAtual      Float?
+  altura         Float?
+  objetivo       String?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  dietas          Dieta[]
+  checksRefeicao  CheckRefeicao[]
+  feedbacks       Feedback[]
+  progressos      RegistroProgresso[]
+}
+
+model Dieta {
+  id        String   @id @default(cuid())
+  titulo    String
+  ativa     Boolean  @default(true)
+  criadaEm  DateTime @default(now())
+
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  refeicoes Refeicao[]
+}
+
+model Refeicao {
+  id              String       @id @default(cuid())
+  tipo            TipoRefeicao
+  horarioSugerido String?
+
+  dietaId String
+  dieta   Dieta @relation(fields: [dietaId], references: [id], onDelete: Cascade)
+
+  alimentos Alimento[]
+  checks    CheckRefeicao[]
+}
+
+model Alimento {
+  id         String  @id @default(cuid())
+  nome       String
+  quantidade String
+  observacao String?
+
+  refeicaoId String
+  refeicao   Refeicao @relation(fields: [refeicaoId], references: [id], onDelete: Cascade)
+
+  receitaId String?
+  receita   Receita? @relation(fields: [receitaId], references: [id])
+}
+
+model Receita {
+  id           String   @id @default(cuid())
+  titulo       String
+  ingredientes String[]
+  modoPreparo  String[]
+  tempoPreparo String?
+
+  alimentos Alimento[]
+}
+
+model CheckRefeicao {
+  id        String   @id @default(cuid())
+  data      String   // YYYY-MM-DD
+  realizada Boolean  @default(false)
+
+  clienteId  String
+  cliente    Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  refeicaoId String
+  refeicao   Refeicao @relation(fields: [refeicaoId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, refeicaoId, data])
+}
+
+model Feedback {
+  id       String   @id @default(cuid())
+  data     String
+  texto    String
+  criadoEm DateTime @default(now())
+
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+}
+
+model RegistroProgresso {
+  id      String   @id @default(cuid())
+  data    String
+  peso    Float?
+  aguaMl  Int?
+  criadoEm DateTime @default(now())
+
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, data])
+}
+
+model Post {
+  id         String   @id @default(cuid())
+  titulo     String
+  slug       String   @unique
+  resumo     String
+  conteudo   String
+  imagemUrl  String?
+  publicado  Boolean  @default(false)
+  criadoEm   DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+enum StatusAgendamento {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  REALIZADO
+}
+
+model Agendamento {
+  id        String             @id @default(cuid())
+  tipo      String
+  data      String
+  horario   String
+  nome      String
+  email     String
+  telefone  String
+  mensagem  String?
+  status    StatusAgendamento  @default(PENDENTE)
+  criadoEm  DateTime           @default(now())
+}
