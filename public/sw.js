@@ -1,9 +1,9 @@
-const CACHE_NAME = 'nutri-ar-v1';
-const OFFLINE_URLS = ['/', '/login', '/cliente'];
+const CACHE_NAME = 'nutri-ar-v2';
+const STATIC_ASSETS = ['/', '/login', '/manifest.json', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
@@ -18,15 +18,38 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
 
+  // Não cachear APIs nem POST
+  if (request.method !== 'GET' || request.url.includes('/api/')) return;
+
+  // Imagens e assets estáticos: cache-first
+  if (request.url.match(/\.(svg|png|jpg|jpeg|webp|ico|css|js)$/)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Páginas HTML: network-first com fallback
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
   );
 });

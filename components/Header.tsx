@@ -14,7 +14,7 @@ const NAV_PUBLIC = [
 
 const NAV_ADMIN = [
   { href: '/admin', label: 'Dashboard' },
-  { href: '/admin/pacientes', label: 'Pacientes' },
+  { href: '/admin/clientes', label: 'Pacientes' },
   { href: '/admin/dietas', label: 'Dietas' },
   { href: '/admin/receitas', label: 'Receitas' },
   { href: '/admin/blog', label: 'Blog' },
