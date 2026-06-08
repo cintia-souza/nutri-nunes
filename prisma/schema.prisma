@@ -204,3 +204,9 @@ model Avaliacao {
   clienteId String
   cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
+
+model PerfilFoto {
+  id     String @id @default(cuid())
+  foto   String
+  userId String @unique
+}

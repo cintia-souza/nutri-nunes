@@ -29,6 +29,7 @@ const NAV_CLIENTE = [
   { href: '/cliente/receitas', label: 'Receitas' },
   { href: '/cliente/progresso', label: 'Progresso' },
   { href: '/cliente/avaliacao', label: 'Avaliar' },
+  { href: '/cliente/perfil', label: 'Perfil' },
 ];
 
 export default function Header() {
