@@ -17,6 +17,7 @@ const NAV_ADMIN = [
   { href: '/admin/clientes', label: 'Pacientes' },
   { href: '/admin/dietas', label: 'Dietas' },
   { href: '/admin/receitas', label: 'Receitas' },
+  { href: '/admin/agendamentos', label: 'Agenda' },
   { href: '/admin/servicos', label: 'Serviços' },
   { href: '/admin/planos', label: 'Planos' },
   { href: '/admin/avaliacoes', label: 'Avaliações' },

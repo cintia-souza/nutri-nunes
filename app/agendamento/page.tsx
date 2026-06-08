@@ -15,17 +15,33 @@ export default function AgendamentoPage() {
   const [tipo, setTipo] = useState('');
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
+  const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', mensagem: '' });
   const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function buscarHorarios(dataSelecionada: string) {
+    setData(dataSelecionada);
+    setHorario('');
+    const res = await fetch(`/api/agendamento?data=${dataSelecionada}`);
+    const ocupados = await res.json();
+    setHorariosOcupados(ocupados);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await fetch('/api/agendamento', {
+    setErro('');
+    const res = await fetch('/api/agendamento', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tipo, data, horario, ...form }),
     });
-    setEnviado(true);
+    if (res.ok) {
+      setEnviado(true);
+    } else {
+      const err = await res.json();
+      setErro(err.error || 'Erro ao agendar');
+    }
   }
 
   if (enviado) {
@@ -39,7 +55,7 @@ export default function AgendamentoPage() {
           </div>
           <h1 className="text-2xl font-bold text-warm-800 mb-3">Agendamento Confirmado!</h1>
           <p className="text-warm-500 mb-2">Sua consulta foi solicitada com sucesso.</p>
-          <p className="text-warm-500 text-sm">Entraremos em contato para confirmar o horário em até 24h.</p>
+          <p className="text-warm-500 text-sm">Você receberá um email de confirmação em breve.</p>
           <div className="mt-8 bg-cream-100 rounded-2xl p-5 text-left">
             <p className="text-sm text-warm-600"><strong>Tipo:</strong> {TIPOS_CONSULTA.find(t => t.id === tipo)?.nome}</p>
             <p className="text-sm text-warm-600"><strong>Data:</strong> {data}</p>
@@ -112,7 +128,7 @@ export default function AgendamentoPage() {
                 type="date"
                 value={data}
                 min={new Date().toISOString().split('T')[0]}
-                onChange={(e) => setData(e.target.value)}
+                onChange={(e) => buscarHorarios(e.target.value)}
                 className="w-full border border-cream-300 rounded-xl px-4 py-3.5 text-warm-800 bg-white focus-visible:ring-2 focus-visible:ring-sage-400 text-lg"
                 required
               />
@@ -122,19 +138,26 @@ export default function AgendamentoPage() {
               <div className="animate-fade-slide-in">
                 <p className="text-sm font-medium text-warm-600 mb-3">Horários disponíveis</p>
                 <div className="grid grid-cols-4 gap-3">
-                  {HORARIOS.map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => setHorario(h)}
-                      className={`py-3 px-4 rounded-xl font-medium text-sm transition-all duration-200 min-h-[48px] ${
-                        horario === h
-                          ? 'bg-sage-600 text-white shadow-sm'
-                          : 'bg-white border border-cream-200 text-warm-700 hover:border-sage-300 hover:bg-sage-50'
-                      }`}
-                    >
-                      {h}
-                    </button>
-                  ))}
+                  {HORARIOS.map((h) => {
+                    const ocupado = horariosOcupados.includes(h);
+                    return (
+                      <button
+                        key={h}
+                        onClick={() => !ocupado && setHorario(h)}
+                        disabled={ocupado}
+                        className={`py-3 px-4 rounded-xl font-medium text-sm transition-all duration-200 min-h-[48px] ${
+                          ocupado
+                            ? 'bg-cream-100 text-warm-300 cursor-not-allowed line-through'
+                            : horario === h
+                              ? 'bg-sage-600 text-white shadow-sm'
+                              : 'bg-white border border-cream-200 text-warm-700 hover:border-sage-300 hover:bg-sage-50'
+                        }`}
+                      >
+                        {h}
+                        {ocupado && <span className="block text-xs">ocupado</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -208,6 +231,8 @@ export default function AgendamentoPage() {
                 placeholder="Alguma observação ou objetivo que gostaria de compartilhar?"
               />
             </div>
+
+            {erro && <p className="text-danger text-sm bg-red-50 p-3 rounded-xl">{erro}</p>}
 
             {/* Resumo */}
             <div className="bg-cream-100 rounded-2xl p-5 border border-cream-200">
