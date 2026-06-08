@@ -79,18 +79,24 @@ const PLANOS = [
   },
 ];
 
-const DEPOIMENTOS = [
-  { nome: 'Camila S.', texto: 'Perdi 12kg em 4 meses sem passar fome. A Adriana mudou minha relação com a comida!', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face' },
-  { nome: 'Roberto M.', texto: 'Minha performance nos treinos melhorou absurdamente. Recomendo demais!', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face' },
-  { nome: 'Ana Paula R.', texto: 'O app facilita muito o dia a dia. Consigo acompanhar tudo pelo celular.', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face' },
-];
 
 export default async function HomePage() {
   let config: SiteConfig = {};
+  let servicosDB: { titulo: string; descricao: string; icone?: string; imagemUrl?: string }[] = [];
+  let planosDB: { nome: string; preco: string; periodo: string; destaque: boolean; itens: string[] }[] = [];
+  let avaliacoes: { nota: number; texto: string; cliente: { nome: string } }[] = [];
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    config = (await (prisma as any).configSite.findUnique({ where: { id: 'config' } })) || {};
-  } catch { /* tabela pode não existir ainda */ }
+    const p = prisma as any;
+    config = (await p.configSite.findUnique({ where: { id: 'config' } })) || {};
+    servicosDB = await p.servico.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
+    planosDB = await p.plano.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
+    avaliacoes = await p.avaliacao.findMany({ where: { aprovada: true }, orderBy: { criadoEm: 'desc' }, take: 6, include: { cliente: { select: { nome: true } } } }).catch(() => []);
+  } catch { /* tabelas podem não existir ainda */ }
+
+  const servicosFinal = servicosDB.length > 0 ? servicosDB.map(s => ({ titulo: s.titulo, desc: s.descricao, icon: s.icone || '🥗', img: s.imagemUrl || '' })) : SERVICOS;
+  const planosFinal = planosDB.length > 0 ? planosDB : PLANOS;
 
   const fotoSobre = config.fotoSobre || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&h=750&fit=crop';
   const fotoCapa = config.fotoCapa || 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?w=1920&h=1080&fit=crop';
@@ -230,18 +236,20 @@ export default async function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SERVICOS.map((s, i) => (
+            {servicosFinal.map((s, i) => (
               <div
                 key={s.titulo}
                 className={`group bg-white rounded-3xl overflow-hidden border border-cream-200 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2 animate-fade-slide-up stagger-${i + 1}`}
               >
-                <div className="h-48 overflow-hidden">
-                  <img
-                    src={s.img}
-                    alt={s.titulo}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                </div>
+                {s.img && (
+                  <div className="h-48 overflow-hidden">
+                    <img
+                      src={s.img}
+                      alt={s.titulo}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  </div>
+                )}
                 <div className="p-6">
                   <span className="text-2xl" aria-hidden="true">{s.icon}</span>
                   <h3 className="font-bold text-warm-800 text-lg mt-3 mb-2">{s.titulo}</h3>
@@ -267,7 +275,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {PLANOS.map((plano) => (
+            {planosFinal.map((plano) => (
               <div
                 key={plano.nome}
                 className={`relative rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 ${
@@ -322,32 +330,36 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* DEPOIMENTOS */}
-      <section className="py-24 px-6 bg-cream-100">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-sage-600 font-semibold text-sm uppercase tracking-wider">Depoimentos</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-warm-800 mt-3">
-              O que meus pacientes dizem
-            </h2>
-          </div>
+      {/* DEPOIMENTOS — do banco */}
+      {avaliacoes.length > 0 && (
+        <section className="py-24 px-6 bg-cream-100">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <span className="text-sage-600 font-semibold text-sm uppercase tracking-wider">Depoimentos</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-warm-800 mt-3">
+                O que meus pacientes dizem
+              </h2>
+            </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {DEPOIMENTOS.map((d) => (
-              <div key={d.nome} className="bg-white rounded-3xl p-7 border border-cream-200 shadow-sm hover:shadow-md transition-all duration-300">
-                <div className="flex items-center gap-3 mb-4">
-                  <img src={d.avatar} alt={d.nome} className="w-12 h-12 rounded-full object-cover" />
-                  <div>
-                    <p className="font-semibold text-warm-800 text-sm">{d.nome}</p>
-                    <div className="flex gap-0.5 text-gold-400 text-xs">★★★★★</div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {avaliacoes.map((a, i) => (
+                <div key={i} className="bg-white rounded-3xl p-7 border border-cream-200 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sage-400 to-sage-600 flex items-center justify-center text-white font-bold text-sm">
+                      {a.cliente.nome.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-warm-800 text-sm">{a.cliente.nome.split(' ')[0]} {a.cliente.nome.split(' ').slice(-1)[0]?.[0]}.</p>
+                      <div className="flex gap-0.5 text-gold-400 text-xs">{'★'.repeat(a.nota)}{'☆'.repeat(5 - a.nota)}</div>
+                    </div>
                   </div>
+                  <p className="text-warm-600 text-sm leading-relaxed italic">&ldquo;{a.texto}&rdquo;</p>
                 </div>
-                <p className="text-warm-600 text-sm leading-relaxed italic">&ldquo;{d.texto}&rdquo;</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CALCULADORA IMC */}
       <section className="py-24 px-6" aria-labelledby="imc-section-heading">

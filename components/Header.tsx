@@ -17,8 +17,10 @@ const NAV_ADMIN = [
   { href: '/admin/clientes', label: 'Pacientes' },
   { href: '/admin/dietas', label: 'Dietas' },
   { href: '/admin/receitas', label: 'Receitas' },
+  { href: '/admin/servicos', label: 'Serviços' },
+  { href: '/admin/planos', label: 'Planos' },
+  { href: '/admin/avaliacoes', label: 'Avaliações' },
   { href: '/admin/blog', label: 'Blog' },
-  { href: '/admin/agendamentos', label: 'Agenda' },
   { href: '/admin/configuracoes', label: 'Config' },
 ];
 
@@ -26,6 +28,7 @@ const NAV_CLIENTE = [
   { href: '/cliente', label: 'Minha Dieta' },
   { href: '/cliente/receitas', label: 'Receitas' },
   { href: '/cliente/progresso', label: 'Progresso' },
+  { href: '/cliente/avaliacao', label: 'Avaliar' },
 ];
 
 export default function Header() {
