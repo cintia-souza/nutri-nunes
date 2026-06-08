@@ -168,7 +168,7 @@ function RelatorioContent() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f0e8" />
                 <XAxis dataKey="data" fontSize={11} stroke="#9c9588" />
                 <YAxis domain={['dataMin - 1', 'dataMax + 1']} fontSize={11} stroke="#9c9588" unit=" kg" />
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e8e3d8' }} formatter={(v: number) => [`${v} kg`, 'Peso']} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e8e3d8' }} formatter={(v) => [`${v} kg`, 'Peso']} />
                 <Area type="monotone" dataKey="peso" stroke="#556f4a" strokeWidth={2.5} fill="url(#gradPeso)" dot={{ r: 4, fill: '#556f4a' }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -191,7 +191,7 @@ function RelatorioContent() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f0e8" />
                 <XAxis dataKey="data" fontSize={11} stroke="#9c9588" />
                 <YAxis fontSize={11} stroke="#9c9588" unit=" ml" />
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e8e3d8' }} formatter={(v: number) => [`${v} ml`, 'Água']} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e8e3d8' }} formatter={(v) => [`${v} ml`, 'Água']} />
                 <Bar dataKey="agua" fill="#4a7a9a" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
