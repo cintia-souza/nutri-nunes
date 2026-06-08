@@ -1,5 +1,20 @@
 import CalculadoraIMC from '@/components/CalculadoraIMC';
 import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+
+interface SiteConfig {
+  fotoSobre?: string;
+  fotoCapa?: string;
+  bio1?: string;
+  bio2?: string;
+  crn?: string;
+  especialidades?: string[];
+  telefone?: string;
+  endereco?: string;
+  whatsapp?: string;
+}
 
 const SERVICOS = [
   {
@@ -70,7 +85,23 @@ const DEPOIMENTOS = [
   { nome: 'Ana Paula R.', texto: 'O app facilita muito o dia a dia. Consigo acompanhar tudo pelo celular.', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  let config: SiteConfig = {};
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    config = (await (prisma as any).configSite.findUnique({ where: { id: 'config' } })) || {};
+  } catch { /* tabela pode não existir ainda */ }
+
+  const fotoSobre = config.fotoSobre || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&h=750&fit=crop';
+  const fotoCapa = config.fotoCapa || 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?w=1920&h=1080&fit=crop';
+  const bio1 = config.bio1 || 'Sou nutricionista formada pela USP, pós-graduada em Nutrição Clínica Funcional e Nutrição Esportiva. Há 8 anos ajudo pessoas a transformarem sua saúde através da alimentação consciente.';
+  const bio2 = config.bio2 || 'Minha abordagem é individualizada — nada de dietas genéricas. Utilizo tecnologia e acompanhamento próximo para garantir que cada paciente alcance seus objetivos de forma saudável e duradoura.';
+  const crn = config.crn || 'CRN-3 • 45.892';
+  const especialidades = config.especialidades?.length ? config.especialidades : ['Nutrição Clínica', 'Esportiva', 'Emagrecimento', 'Reeducação'];
+  const whatsapp = config.whatsapp || '5511999999999';
+  const telefone = config.telefone || '(11) 99999-9999';
+  const endereco = config.endereco || 'São Paulo, SP';
+
   return (
     <main className="min-h-screen overflow-hidden">
       {/* HERO — Full visual com imagem */}
@@ -78,7 +109,7 @@ export default function HomePage() {
         {/* Background image */}
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1490818387583-1baba5e638af?w=1920&h=1080&fit=crop"
+            src={fotoCapa}
             alt=""
             className="w-full h-full object-cover"
             aria-hidden="true"
@@ -153,12 +184,12 @@ export default function HomePage() {
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-full h-full bg-sage-200/40 rounded-3xl" aria-hidden="true" />
             <img
-              src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&h=750&fit=crop"
+              src={fotoSobre}
               alt="Nutricionista Adriana Rodrigues em seu consultório"
               className="relative rounded-3xl object-cover w-full h-[500px] shadow-lg"
             />
             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-lg p-5 animate-fade-slide-in">
-              <p className="text-sage-700 font-bold text-lg">CRN-3 • 45.892</p>
+              <p className="text-sage-700 font-bold text-lg">{crn}</p>
               <p className="text-warm-500 text-sm">Nutricionista Clínica e Esportiva</p>
             </div>
           </div>
@@ -169,13 +200,13 @@ export default function HomePage() {
               Olá, eu sou a <span className="text-gradient">Adriana Rodrigues</span>
             </h2>
             <p className="text-warm-600 leading-relaxed mb-4">
-              Sou nutricionista formada pela USP, pós-graduada em Nutrição Clínica Funcional e Nutrição Esportiva. Há 8 anos ajudo pessoas a transformarem sua saúde através da alimentação consciente.
+              {bio1}
             </p>
             <p className="text-warm-600 leading-relaxed mb-6">
-              Minha abordagem é individualizada — nada de dietas genéricas. Utilizo tecnologia e acompanhamento próximo para garantir que cada paciente alcance seus objetivos de forma saudável e duradoura.
+              {bio2}
             </p>
             <div className="flex flex-wrap gap-3">
-              {['Nutrição Clínica', 'Esportiva', 'Emagrecimento', 'Reeducação'].map((tag) => (
+              {especialidades.map((tag) => (
                 <span key={tag} className="bg-sage-50 text-sage-700 px-4 py-2 rounded-xl text-sm font-medium border border-sage-100">
                   {tag}
                 </span>
@@ -365,7 +396,7 @@ export default function HomePage() {
               Agendar Consulta
             </Link>
             <a
-              href="https://wa.me/5511999999999"
+              href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noopener noreferrer"
               className="border-2 border-white/50 text-white px-8 py-4 rounded-2xl font-medium hover:bg-white/10 transition-all duration-300 min-h-[52px] flex items-center gap-2"
@@ -447,8 +478,8 @@ export default function HomePage() {
           <div>
             <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-warm-400">Contato</h4>
             <ul className="space-y-2 text-sm text-warm-400">
-              <li>📍 São Paulo, SP</li>
-              <li>📞 (11) 99999-9999</li>
+              <li>📍 {endereco}</li>
+              <li>📞 {telefone}</li>
               <li>✉️ contato@adriananutrição.com</li>
               <li className="pt-2">
                 <Link href="/agendamento" className="text-sage-400 hover:text-sage-300 font-medium transition-colors">

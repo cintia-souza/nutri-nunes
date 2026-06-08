@@ -156,3 +156,17 @@ model Agendamento {
   status    StatusAgendamento  @default(PENDENTE)
   criadoEm  DateTime           @default(now())
 }
+
+model ConfigSite {
+  id         String  @id @default("config")
+  fotoSobre  String?
+  fotoCapa   String?
+  bio1       String?
+  bio2       String?
+  crn        String?
+  especialidades String[]
+  telefone   String?
+  endereco   String?
+  instagram  String?
+  whatsapp   String?
+}

@@ -19,6 +19,7 @@ const NAV_ADMIN = [
   { href: '/admin/receitas', label: 'Receitas' },
   { href: '/admin/blog', label: 'Blog' },
   { href: '/admin/agendamentos', label: 'Agenda' },
+  { href: '/admin/configuracoes', label: 'Config' },
 ];
 
 const NAV_CLIENTE = [
