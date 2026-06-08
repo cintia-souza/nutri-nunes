@@ -84,6 +84,7 @@ model Receita {
   ingredientes String[]
   modoPreparo  String[]
   tempoPreparo String?
+  videoUrl     String?
 
   alimentos Alimento[]
 }

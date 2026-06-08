@@ -20,10 +20,10 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') return NextResponse.json(null, { status: 403 });
 
-  const { titulo, ingredientes, modoPreparo, tempoPreparo } = await req.json();
+  const { titulo, ingredientes, modoPreparo, tempoPreparo, videoUrl } = await req.json();
 
-  const receita = await prisma.receita.create({
-    data: { titulo, ingredientes, modoPreparo, tempoPreparo },
+  const receita = await (prisma.receita.create as Function)({
+    data: { titulo, ingredientes, modoPreparo, tempoPreparo, videoUrl },
   });
 
   return NextResponse.json(receita, { status: 201 });
@@ -34,11 +34,11 @@ export async function PUT(req: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') return NextResponse.json(null, { status: 403 });
 
-  const { id, titulo, ingredientes, modoPreparo, tempoPreparo } = await req.json();
+  const { id, titulo, ingredientes, modoPreparo, tempoPreparo, videoUrl } = await req.json();
 
-  const receita = await prisma.receita.update({
+  const receita = await (prisma.receita.update as Function)({
     where: { id },
-    data: { titulo, ingredientes, modoPreparo, tempoPreparo },
+    data: { titulo, ingredientes, modoPreparo, tempoPreparo, videoUrl },
   });
 
   return NextResponse.json(receita);

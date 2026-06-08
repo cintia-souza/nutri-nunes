@@ -8,6 +8,7 @@ interface Receita {
   ingredientes: string[];
   modoPreparo: string[];
   tempoPreparo?: string;
+  videoUrl?: string;
   _count?: { alimentos: number };
 }
 
@@ -15,7 +16,7 @@ export default function ReceitasAdminPage() {
   const [receitas, setReceitas] = useState<Receita[]>([]);
   const [editando, setEditando] = useState<Receita | null>(null);
   const [formAberto, setFormAberto] = useState(false);
-  const [form, setForm] = useState({ titulo: '', tempoPreparo: '', ingredientes: [''], modoPreparo: [''] });
+  const [form, setForm] = useState({ titulo: '', tempoPreparo: '', videoUrl: '', ingredientes: [''], modoPreparo: [''] });
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState('');
 
@@ -27,7 +28,7 @@ export default function ReceitasAdminPage() {
   }
 
   function resetForm() {
-    setForm({ titulo: '', tempoPreparo: '', ingredientes: [''], modoPreparo: [''] });
+    setForm({ titulo: '', tempoPreparo: '', videoUrl: '', ingredientes: [''], modoPreparo: [''] });
     setEditando(null);
     setFormAberto(false);
   }
@@ -37,6 +38,7 @@ export default function ReceitasAdminPage() {
     setForm({
       titulo: r.titulo,
       tempoPreparo: r.tempoPreparo || '',
+      videoUrl: r.videoUrl || '',
       ingredientes: r.ingredientes.length > 0 ? r.ingredientes : [''],
       modoPreparo: r.modoPreparo.length > 0 ? r.modoPreparo : [''],
     });
@@ -67,6 +69,7 @@ export default function ReceitasAdminPage() {
       ...(editando && { id: editando.id }),
       titulo: form.titulo,
       tempoPreparo: form.tempoPreparo || undefined,
+      videoUrl: form.videoUrl || undefined,
       ingredientes: form.ingredientes.filter(i => i.trim()),
       modoPreparo: form.modoPreparo.filter(p => p.trim()),
     };
@@ -126,7 +129,7 @@ export default function ReceitasAdminPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Título e tempo */}
+            {/* Título, tempo e vídeo */}
             <div className="grid md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label htmlFor="rec-titulo" className="block text-sm font-medium text-warm-600 mb-1.5">Nome da receita</label>
@@ -149,6 +152,24 @@ export default function ReceitasAdminPage() {
                   className="w-full border border-cream-300 rounded-xl px-4 py-3 bg-cream-50 text-warm-800 placeholder-warm-400 focus-visible:ring-2 focus-visible:ring-sage-400"
                 />
               </div>
+            </div>
+
+            {/* Link de vídeo */}
+            <div>
+              <label htmlFor="rec-video" className="block text-sm font-medium text-warm-600 mb-1.5 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-md bg-red-50 flex items-center justify-center text-xs">▶️</span>
+                Link do Vídeo (opcional)
+              </label>
+              <input
+                id="rec-video"
+                value={form.videoUrl}
+                onChange={(e) => setForm(f => ({ ...f, videoUrl: e.target.value }))}
+                placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+                className="w-full border border-cream-300 rounded-xl px-4 py-3 bg-cream-50 text-warm-800 placeholder-warm-400 focus-visible:ring-2 focus-visible:ring-sage-400"
+              />
+              {form.videoUrl && (
+                <p className="text-xs text-sage-600 mt-1.5">✓ Vídeo vinculado — paciente verá o botão &quot;Assistir vídeo&quot; na receita</p>
+              )}
             </div>
 
             {/* Ingredientes */}
@@ -256,6 +277,9 @@ export default function ReceitasAdminPage() {
                       )}
                       <span className="text-xs bg-sage-50 text-sage-700 px-2.5 py-1 rounded-lg">{r.ingredientes.length} ingredientes</span>
                       <span className="text-xs bg-blue-50 text-info px-2.5 py-1 rounded-lg">{r.modoPreparo.length} passos</span>
+                      {r.videoUrl && (
+                        <span className="text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg">▶️ Vídeo</span>
+                      )}
                     </div>
                   </div>
                   {r._count && r._count.alimentos > 0 && (
