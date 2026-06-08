@@ -39,12 +39,13 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     fetch('/api/admin/configuracoes')
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : {})
       .then(data => {
         if (data && Object.keys(data).length > 0) {
           setForm({ ...DEFAULTS, ...data });
         }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   function handleFileUpload(field: 'fotoSobre' | 'fotoCapa', file: File) {
