@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TipoRefeicao } from '@/types';
 import Link from 'next/link';
@@ -24,6 +24,14 @@ function criarRefeicaoVazia(): RefeicaoForm[] {
 }
 
 export default function DietasPage() {
+  return (
+    <Suspense fallback={<div className="max-w-4xl mx-auto px-6 py-8"><div className="animate-pulse h-10 bg-cream-200 rounded-xl w-1/3" /></div>}>
+      <DietasContent />
+    </Suspense>
+  );
+}
+
+function DietasContent() {
   const params = useSearchParams();
   const paramClienteId = params.get('clienteId');
 

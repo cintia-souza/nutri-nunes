@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
@@ -64,6 +64,14 @@ function StatCard({ icon, label, value, subtitle, trend }: { icon: string; label
 }
 
 export default function RelatorioPage() {
+  return (
+    <Suspense fallback={<div className="max-w-6xl mx-auto p-6 pt-10"><div className="animate-pulse h-10 bg-cream-200 rounded-xl w-1/3" /></div>}>
+      <RelatorioContent />
+    </Suspense>
+  );
+}
+
+function RelatorioContent() {
   const params = useSearchParams();
   const clienteId = params.get('clienteId');
   const [data, setData] = useState<Relatorio | null>(null);
