@@ -4,9 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { hojeLocal, formatarDataExtenso, formatarDataCurta, montarData } from '@/lib/datas';
 
-const HORARIOS = [
-  { periodo: 'Manhã', slots: ['08:00', '09:00', '10:00', '11:00'] },
-  { periodo: 'Tarde', slots: ['14:00', '15:00', '16:00', '17:00'] },
+const SLOTS = [
+  { periodo: 'Manhã', icon: '☀️', horarios: ['08:00', '09:00', '10:00', '11:00'] },
+  { periodo: 'Tarde', icon: '🌤️', horarios: ['14:00', '15:00', '16:00', '17:00'] },
 ];
 
 const TIPOS = [
@@ -25,13 +25,15 @@ export default function AgendamentoPage() {
   const [mensagem, setMensagem] = useState('');
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
   const [usuario, setUsuario] = useState<{ nome: string; email: string; telefone: string } | null>(null);
+
+  const hojeStr = hojeLocal();
 
   useEffect(() => {
     fetch('/api/cliente/perfil').then(r => r.ok ? r.json() : null).then(setUsuario);
   }, []);
 
-  // Gera array do calendário
   const calendario = useMemo(() => {
     const primeiro = new Date(ano, mes, 1).getDay();
     const total = new Date(ano, mes + 1, 0).getDate();
@@ -41,8 +43,6 @@ export default function AgendamentoPage() {
     while (celulas.length < 42) celulas.push(null);
     return celulas;
   }, [ano, mes]);
-
-  const hojeStr = hojeLocal();
 
   const dataSel = dia ? montarData(ano, mes, dia) : '';
   const nomeMes = new Date(ano, mes).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -60,8 +60,7 @@ export default function AgendamentoPage() {
   }
 
   function diaDisabled(d: number) {
-    const date = new Date(ano, mes, d);
-    if (date.getDay() === 0) return true;
+    if (new Date(ano, mes, d).getDay() === 0) return true;
     return montarData(ano, mes, d) < hojeStr;
   }
 
@@ -77,7 +76,7 @@ export default function AgendamentoPage() {
 
   async function confirmar() {
     if (!usuario || !dataSel || !horario || !tipo) return;
-    setErro('');
+    setErro(''); setLoading(true);
     try {
       const res = await fetch('/api/agendamento', {
         method: 'POST',
@@ -87,161 +86,262 @@ export default function AgendamentoPage() {
       if (res.ok) setEnviado(true);
       else { const e = await res.json(); setErro(e.error || 'Erro ao agendar.'); }
     } catch { setErro('Erro de conexão. Tente novamente.'); }
+    setLoading(false);
   }
 
-  // --- TELA DE SUCESSO ---
+  // ─── TELA DE SUCESSO ───
   if (enviado) {
     return (
       <main className="min-h-[80vh] flex items-center justify-center p-6">
         <div className="text-center max-w-sm animate-fade-slide-in">
-          <div className="w-16 h-16 bg-sage-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <svg className="w-8 h-8 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <div className="w-20 h-20 bg-sage-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-xl font-bold text-warm-800 mb-2">Agendamento Enviado!</h1>
+          <h1 className="text-2xl font-bold text-warm-800 mb-2">Agendamento Enviado!</h1>
           <p className="text-warm-500 text-sm mb-6">Você receberá um email quando for confirmado.</p>
-          <div className="bg-cream-100 rounded-xl p-4 text-left text-sm text-warm-600 space-y-1 mb-6">
-            <p><strong>{TIPOS.find(t => t.id === tipo)?.nome}</strong></p>
-            <p>{formatarDataExtenso(dataSel)} às {horario}</p>
+          <div className="bg-cream-100 rounded-2xl p-5 text-left text-sm text-warm-600 space-y-1.5 mb-8">
+            <p><strong>{TIPOS.find(t => t.id === tipo)?.nome}</strong> — {TIPOS.find(t => t.id === tipo)?.preco}</p>
+            <p>📅 {formatarDataExtenso(dataSel)} às {horario}</p>
+            <p className="text-warm-400 text-xs">👤 {usuario?.nome}</p>
           </div>
           <div className="flex gap-3 justify-center">
-            <Link href="/cliente" className="bg-sage-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-sage-700">Minha Dieta</Link>
-            <Link href="/" className="border border-cream-300 text-warm-600 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-cream-50">Site</Link>
+            <Link href="/cliente" className="bg-sage-600 text-white px-6 py-3 rounded-xl text-sm font-medium hover:bg-sage-700 transition-all">Minha Dieta</Link>
+            <Link href="/" className="border border-cream-300 text-warm-600 px-6 py-3 rounded-xl text-sm font-medium hover:bg-cream-50 transition-all">Voltar ao Site</Link>
           </div>
         </div>
       </main>
     );
   }
 
-  // --- PÁGINA PRINCIPAL ---
+  // ─── PÁGINA PRINCIPAL ───
   return (
-    <main className="max-w-lg mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-warm-800">Agendar Consulta</h1>
-        <Link href="/" className="text-xs text-sage-600 hover:text-sage-700 font-medium">← Site</Link>
+    <main className="max-w-5xl mx-auto px-4 py-8 md:px-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-warm-800">Agendar Consulta</h1>
+          <p className="text-warm-500 text-sm mt-1">Selecione o tipo, data e horário.</p>
+        </div>
+        <Link href="/" className="text-sm text-sage-600 font-medium hover:text-sage-700 px-3 py-2 rounded-lg hover:bg-sage-50 transition-all hidden md:inline-flex items-center gap-1">
+          ← Voltar ao site
+        </Link>
       </div>
 
-      {/* TIPO */}
-      <section className="mb-5">
-        <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider mb-2">Tipo de consulta</p>
-        <div className="flex gap-2">
-          {TIPOS.map(t => (
-            <button key={t.id} onClick={() => setTipo(t.id)}
-              className={`flex-1 py-3 rounded-xl text-center border-2 transition-all ${tipo === t.id ? 'border-sage-500 bg-sage-50' : 'border-cream-200 hover:border-sage-300'}`}>
-              <span className="block text-lg">{t.icon}</span>
-              <span className="block text-[11px] font-semibold text-warm-800 mt-0.5">{t.nome.split(' ')[0]}</span>
-              <span className="block text-[10px] text-sage-600">{t.preco}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* CALENDÁRIO */}
-      <section className="bg-white rounded-2xl border border-cream-200 shadow-sm p-4 mb-5">
-        <div className="flex items-center justify-between mb-3">
-          <button onClick={() => podeMesAnterior() && mudarMes(-1)} disabled={!podeMesAnterior()}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-cream-100 disabled:opacity-30 disabled:cursor-not-allowed text-warm-600">
-            ‹
+      {/* Tipo de consulta */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {TIPOS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTipo(t.id)}
+            className={`relative p-4 rounded-2xl border-2 text-center transition-all duration-200 ${
+              tipo === t.id
+                ? 'border-sage-500 bg-sage-50 shadow-sm'
+                : 'border-cream-200 bg-white hover:border-sage-300 hover:shadow-sm'
+            }`}
+          >
+            <span className="text-2xl block mb-1">{t.icon}</span>
+            <span className="text-xs font-semibold text-warm-800 block">{t.nome}</span>
+            <span className="text-[10px] text-warm-400 block mt-0.5">{t.duracao}</span>
+            <span className="text-xs font-bold text-sage-700 block mt-1">{t.preco}</span>
+            {tipo === t.id && (
+              <span className="absolute top-2 right-2 w-5 h-5 bg-sage-600 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </span>
+            )}
           </button>
-          <span className="text-sm font-semibold text-warm-800 capitalize">{nomeMes}</span>
-          <button onClick={() => mudarMes(1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-cream-100 text-warm-600">
-            ›
-          </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Cabeçalho */}
-        <div className="grid grid-cols-7 text-center mb-1">
-          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l, i) => (
-            <span key={i} className={`text-[10px] font-bold py-1 ${i === 0 ? 'text-red-300' : 'text-warm-400'}`}>{l}</span>
-          ))}
-        </div>
-
-        {/* Dias */}
-        <div className="grid grid-cols-7 text-center">
-          {calendario.map((d, i) => {
-            if (d === null) return <span key={i} className="h-9" />;
-            const off = diaDisabled(d);
-            const sel = dia === d;
-            const ehHoje = montarData(ano, mes, d) === hojeStr;
-            return (
+      {/* Grid principal: Calendário + Horários */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* ─── LADO ESQUERDO: CALENDÁRIO (5 cols) ─── */}
+        <div className="md:col-span-5">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-200">
+            {/* Navegação mês */}
+            <div className="flex items-center justify-between mb-4">
               <button
-                key={i}
-                disabled={off}
-                onClick={() => clickDia(d)}
-                className={`h-9 w-full rounded-lg text-xs font-medium transition-all
-                  ${off ? 'text-warm-300 cursor-not-allowed' : ''}
-                  ${sel ? 'bg-sage-600 text-white font-bold' : ''}
-                  ${!off && !sel && ehHoje ? 'ring-2 ring-sage-400 text-sage-700 font-bold' : ''}
-                  ${!off && !sel && !ehHoje ? 'text-warm-700 hover:bg-sage-50' : ''}
-                `}
+                onClick={() => podeMesAnterior() && mudarMes(-1)}
+                disabled={!podeMesAnterior()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-cream-100 disabled:opacity-30 disabled:cursor-not-allowed text-warm-600 transition-colors"
               >
-                {d}
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
               </button>
-            );
-          })}
+              <h3 className="text-sm font-bold text-warm-800 capitalize">{nomeMes}</h3>
+              <button
+                onClick={() => mudarMes(1)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-cream-100 text-warm-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+
+            {/* Cabeçalho semana */}
+            <div className="grid grid-cols-7 mb-1">
+              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l, i) => (
+                <div key={i} className={`text-center text-[10px] font-bold uppercase py-1.5 ${i === 0 ? 'text-red-400' : 'text-warm-400'}`}>{l}</div>
+              ))}
+            </div>
+
+            {/* Dias */}
+            <div className="grid grid-cols-7 gap-0.5">
+              {calendario.map((d, i) => {
+                if (d === null) return <div key={`e${i}`} className="h-10" />;
+                const off = diaDisabled(d);
+                const sel = dia === d;
+                const ehHoje = montarData(ano, mes, d) === hojeStr;
+
+                return (
+                  <button
+                    key={`d${i}`}
+                    disabled={off}
+                    onClick={() => clickDia(d)}
+                    className={`h-10 rounded-xl text-sm font-medium transition-all duration-150 relative
+                      ${off ? 'text-warm-300 cursor-not-allowed' : ''}
+                      ${sel ? 'bg-sage-600 text-white font-bold shadow-md shadow-sage-200' : ''}
+                      ${!off && !sel && ehHoje ? 'bg-sage-100 text-sage-800 font-bold' : ''}
+                      ${!off && !sel && !ehHoje ? 'text-warm-700 hover:bg-sage-50' : ''}
+                    `}
+                  >
+                    {d}
+                    {ehHoje && !sel && <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-sage-500" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Data selecionada */}
+            {dia && !diaDisabled(dia) && (
+              <div className="mt-4 text-center animate-fade-slide-in">
+                <span className="inline-block bg-sage-50 text-sage-700 text-xs font-medium px-4 py-1.5 rounded-full border border-sage-200">
+                  📅 {formatarDataExtenso(dataSel)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {dia && !diaDisabled(dia) && (
-          <div className="mt-3 text-center">
-            <span className="inline-block bg-sage-50 text-sage-700 text-xs font-medium px-3 py-1 rounded-lg">
-              {formatarDataExtenso(dataSel)}
-            </span>
-          </div>
-        )}
-      </section>
-
-      {/* HORÁRIOS */}
-      {dia && !diaDisabled(dia) && (
-        <section className="bg-white rounded-2xl border border-cream-200 shadow-sm p-4 mb-5 animate-fade-slide-in">
-          <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider mb-3">Horário disponível</p>
-          {HORARIOS.map(grupo => (
-            <div key={grupo.periodo} className="mb-3 last:mb-0">
-              <p className="text-[10px] text-warm-400 uppercase mb-1.5">{grupo.periodo}</p>
-              <div className="grid grid-cols-4 gap-1.5">
-                {grupo.slots.map(h => {
-                  const occ = ocupados.includes(h);
-                  const sel = horario === h;
-                  return (
-                    <button key={h} disabled={occ} onClick={() => setHorario(h)}
-                      className={`py-2 rounded-lg text-xs font-medium transition-all
-                        ${occ ? 'bg-cream-100 text-warm-300 line-through cursor-not-allowed' : ''}
-                        ${sel ? 'bg-sage-600 text-white' : ''}
-                        ${!occ && !sel ? 'bg-cream-50 text-warm-700 hover:bg-sage-50 border border-cream-200' : ''}
-                      `}
-                    >{h}</button>
-                  );
-                })}
+        {/* ─── LADO DIREITO: HORÁRIOS + CONFIRMAÇÃO (7 cols) ─── */}
+        <div className="md:col-span-7">
+          {!dia || diaDisabled(dia) ? (
+            /* Estado vazio */
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-cream-200 flex flex-col items-center justify-center h-full min-h-[300px] text-center">
+              <div className="w-16 h-16 bg-cream-100 rounded-full flex items-center justify-center mb-4">
+                <span className="text-2xl">📅</span>
               </div>
+              <h3 className="font-semibold text-warm-700 mb-1">Selecione uma data</h3>
+              <p className="text-warm-400 text-sm">Clique em um dia no calendário para ver os horários disponíveis.</p>
             </div>
-          ))}
-        </section>
-      )}
+          ) : (
+            /* Horários + Confirmação */
+            <div className="space-y-5 animate-fade-slide-in">
+              {/* Horários */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-200">
+                <h3 className="text-sm font-bold text-warm-800 mb-4">
+                  Horários para {formatarDataCurta(dataSel)}
+                </h3>
 
-      {/* CONFIRMAR */}
-      {horario && tipo && (
-        <section className="animate-fade-slide-in space-y-4">
-          <div className="bg-white rounded-2xl border border-cream-200 shadow-sm p-4">
-            <label className="text-xs font-medium text-warm-600 block mb-1.5">Observação (opcional)</label>
-            <textarea value={mensagem} onChange={e => setMensagem(e.target.value)} rows={2}
-              className="w-full border border-cream-200 rounded-lg px-3 py-2 text-sm bg-cream-50 resize-none focus-visible:ring-2 focus-visible:ring-sage-400"
-              placeholder="Algo que gostaria de informar?" />
-          </div>
+                {SLOTS.map(grupo => (
+                  <div key={grupo.periodo} className="mb-4 last:mb-0">
+                    <p className="text-[11px] font-semibold text-warm-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <span>{grupo.icon}</span> {grupo.periodo}
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                      {grupo.horarios.map(h => {
+                        const occ = ocupados.includes(h);
+                        const sel = horario === h;
+                        return (
+                          <button
+                            key={h}
+                            disabled={occ}
+                            onClick={() => setHorario(h)}
+                            className={`py-3 rounded-xl text-sm font-medium transition-all duration-200 border
+                              ${occ ? 'bg-cream-100 text-warm-300 border-cream-200 cursor-not-allowed line-through opacity-60' : ''}
+                              ${sel ? 'bg-sage-600 text-white border-sage-600 shadow-md shadow-sage-200/50 scale-[1.02]' : ''}
+                              ${!occ && !sel ? 'bg-white text-warm-700 border-cream-200 hover:bg-sage-50 hover:border-sage-300 hover:shadow-sm' : ''}
+                            `}
+                          >
+                            {h}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
 
-          <div className="bg-sage-50 border border-sage-200 rounded-2xl p-4 text-sm text-sage-800 space-y-1">
-            <p className="font-semibold">Resumo</p>
-            <p>{TIPOS.find(t => t.id === tipo)?.icon} {TIPOS.find(t => t.id === tipo)?.nome} — {TIPOS.find(t => t.id === tipo)?.preco}</p>
-            <p>📅 {formatarDataCurta(dataSel)} às {horario}</p>
-            <p className="text-sage-600 text-xs">👤 {usuario?.nome}</p>
-          </div>
+                {ocupados.length === SLOTS.flatMap(s => s.horarios).length && (
+                  <p className="text-sm text-warm-400 text-center py-4 bg-cream-50 rounded-xl mt-3">
+                    😔 Todos os horários estão ocupados neste dia.
+                  </p>
+                )}
+              </div>
 
-          {erro && <p className="text-sm text-danger bg-red-50 rounded-xl p-3">{erro}</p>}
+              {/* Observação */}
+              {horario && (
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-200 animate-fade-slide-in">
+                  <label className="text-xs font-semibold text-warm-600 block mb-2">Observação (opcional)</label>
+                  <textarea
+                    value={mensagem}
+                    onChange={e => setMensagem(e.target.value)}
+                    rows={2}
+                    placeholder="Algo que gostaria de informar antes da consulta?"
+                    className="w-full border border-cream-200 rounded-xl px-4 py-3 text-sm bg-cream-50 resize-none placeholder-warm-400 focus-visible:ring-2 focus-visible:ring-sage-400 focus-visible:border-sage-400 transition-all"
+                  />
+                </div>
+              )}
 
-          <button onClick={confirmar}
-            className="w-full bg-sage-600 text-white py-3.5 rounded-xl font-semibold hover:bg-sage-700 active:scale-[0.98] transition-all shadow-sm min-h-[52px]">
-            Confirmar Agendamento
-          </button>
-        </section>
-      )}
+              {/* Resumo + CTA */}
+              {horario && tipo && (
+                <div className="animate-fade-slide-in space-y-4">
+                  {/* Resumo */}
+                  <div className="bg-sage-50 border border-sage-200 rounded-2xl p-5">
+                    <h4 className="text-xs font-bold text-sage-700 uppercase tracking-wider mb-3">Resumo do Agendamento</h4>
+                    <div className="space-y-2 text-sm text-sage-800">
+                      <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm text-sm">{TIPOS.find(t => t.id === tipo)?.icon}</span>
+                        <div>
+                          <p className="font-medium">{TIPOS.find(t => t.id === tipo)?.nome}</p>
+                          <p className="text-sage-600 text-xs">{TIPOS.find(t => t.id === tipo)?.duracao} — {TIPOS.find(t => t.id === tipo)?.preco}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm text-sm">📅</span>
+                        <p className="font-medium">{formatarDataCurta(dataSel)} às {horario}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm text-sm">👤</span>
+                        <p className="text-sage-600 text-xs">{usuario?.nome} ({usuario?.email})</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Erro */}
+                  {erro && (
+                    <div className="bg-red-50 border border-red-200 text-danger rounded-xl p-3.5 text-sm font-medium animate-fade-slide-in">
+                      ⚠️ {erro}
+                    </div>
+                  )}
+
+                  {/* Botão CTA */}
+                  <button
+                    onClick={confirmar}
+                    disabled={loading}
+                    className="w-full bg-sage-600 hover:bg-sage-700 text-white font-semibold py-4 rounded-xl shadow-lg shadow-sage-200/50 transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed min-h-[56px] text-base"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" /></svg>
+                        Agendando...
+                      </span>
+                    ) : (
+                      '✓ Confirmar Agendamento'
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
