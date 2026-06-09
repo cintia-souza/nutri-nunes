@@ -17,13 +17,40 @@ export async function enviarEmail({ to, subject, html }: EmailOptions): Promise<
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
     });
-    return res.ok;
-  } catch {
-    console.error('[EMAIL ERRO] Falha ao enviar email');
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[EMAIL ERRO] Status ${res.status}: ${err}`);
+      return false;
+    }
+
+    console.log(`[EMAIL OK] Enviado para: ${to}`);
+    return true;
+  } catch (e) {
+    console.error('[EMAIL ERRO] Exceção:', e);
     return false;
   }
+}
+
+export function emailAgendamentoRecebido(nome: string, data: string, horario: string, tipo: string) {
+  return {
+    subject: '📅 Agendamento Recebido — Adriana Rodrigues Nutrição',
+    html: `
+      <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background: #faf8f4; border-radius: 16px;">
+        <h2 style="color: #44583c; margin-bottom: 8px;">Agendamento Recebido! 📅</h2>
+        <p style="color: #5c5850;">Olá <strong>${nome}</strong>, recebemos seu pedido de consulta:</p>
+        <div style="background: white; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid #e8e3d8;">
+          <p style="margin: 4px 0; color: #3d3a35;"><strong>📋 Tipo:</strong> ${tipo}</p>
+          <p style="margin: 4px 0; color: #3d3a35;"><strong>📅 Data:</strong> ${data}</p>
+          <p style="margin: 4px 0; color: #3d3a35;"><strong>🕐 Horário:</strong> ${horario}</p>
+        </div>
+        <p style="color: #7a746a; font-size: 14px;">Aguarde a confirmação — você receberá outro email quando sua consulta for confirmada.</p>
+        <p style="color: #556f4a; font-weight: bold; margin-top: 20px;">Adriana Rodrigues — Nutrição Inteligente</p>
+      </div>
+    `,
+  };
 }
 
 export function emailConfirmacaoAgendamento(nome: string, data: string, horario: string, tipo: string) {

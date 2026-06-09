@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import { enviarEmail, emailConfirmacaoAgendamento, emailCancelamentoAgendamento, emailRemarcacaoAgendamento } from '@/lib/email';
+import { enviarEmail, emailConfirmacaoAgendamento, emailCancelamentoAgendamento, emailRemarcacaoAgendamento, emailAgendamentoRecebido } from '@/lib/email';
 
 // GET — listar agendamentos (admin: todos, público: horários ocupados por data)
 export async function GET(req: NextRequest) {
@@ -50,10 +50,15 @@ export async function POST(req: NextRequest) {
     data: { tipo, data, horario, nome, email, telefone, mensagem, status },
   });
 
-  // Se confirmado direto (admin criou), enviar email de confirmação
-  if (confirmarDireto && email) {
-    const { subject, html } = emailConfirmacaoAgendamento(nome, data, horario, tipo);
-    await enviarEmail({ to: email, subject, html });
+  // Enviar email
+  if (email) {
+    if (confirmarDireto) {
+      const { subject, html } = emailConfirmacaoAgendamento(nome, data, horario, tipo);
+      await enviarEmail({ to: email, subject, html });
+    } else {
+      const { subject, html } = emailAgendamentoRecebido(nome, data, horario, tipo);
+      await enviarEmail({ to: email, subject, html });
+    }
   }
 
   return NextResponse.json(agendamento, { status: 201 });
