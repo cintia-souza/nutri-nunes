@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -36,8 +36,11 @@ const NAV_CLIENTE = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => { setMounted(true); }, []);
 
   const isAdmin = pathname.startsWith('/admin');
   const isCliente = pathname.startsWith('/cliente');
@@ -71,7 +74,7 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => (
+          {mounted && navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -85,7 +88,7 @@ export default function Header() {
             </Link>
           ))}
 
-          {isAuth ? (
+          {mounted && isAuth ? (
             <button
               onClick={handleLogout}
               className="ml-3 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
@@ -120,7 +123,7 @@ export default function Header() {
       </nav>
 
       {/* Mobile Nav */}
-      {menuOpen && (
+      {menuOpen && mounted && (
         <div className="md:hidden glass border-t border-cream-200/60 animate-fade-slide-in">
           <div className="px-6 py-4 space-y-1">
             {navLinks.map((link) => (
