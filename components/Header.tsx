@@ -27,6 +27,7 @@ const NAV_ADMIN = [
 
 const NAV_CLIENTE = [
   { href: '/cliente', label: 'Minha Dieta' },
+  { href: '/cliente/agendamento', label: 'Agendar' },
   { href: '/cliente/receitas', label: 'Receitas' },
   { href: '/cliente/progresso', label: 'Progresso' },
   { href: '/cliente/avaliacao', label: 'Avaliar' },
