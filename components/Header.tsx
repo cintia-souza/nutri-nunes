@@ -8,7 +8,6 @@ const NAV_PUBLIC = [
   { href: '/#sobre', label: 'Sobre' },
   { href: '/#servicos', label: 'Serviços' },
   { href: '/#planos', label: 'Planos' },
-  { href: '/agendamento', label: 'Agendar' },
   { href: '/blog', label: 'Blog' },
 ];
 

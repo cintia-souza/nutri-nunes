@@ -141,7 +141,7 @@ export default async function HomePage() {
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                href="/agendamento"
+                href="/login"
                 className="bg-white text-sage-800 px-7 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 min-h-[52px] flex items-center gap-2"
               >
                 Agendar Consulta
@@ -315,7 +315,7 @@ export default async function HomePage() {
                 </ul>
 
                 <Link
-                  href="/agendamento"
+                  href="/login"
                   className={`block text-center w-full py-3.5 rounded-xl font-semibold transition-all duration-200 min-h-[48px] ${
                     plano.destaque
                       ? 'bg-white text-sage-700 hover:bg-sage-50 shadow-sm'
@@ -402,7 +402,7 @@ export default async function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="/agendamento"
+              href="/login"
               className="bg-white text-sage-800 px-8 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 min-h-[52px]"
             >
               Agendar Consulta
@@ -494,7 +494,7 @@ export default async function HomePage() {
               <li>📞 {telefone}</li>
               <li>✉️ contato@adriananutrição.com</li>
               <li className="pt-2">
-                <Link href="/agendamento" className="text-sage-400 hover:text-sage-300 font-medium transition-colors">
+                <Link href="/login" className="text-sage-400 hover:text-sage-300 font-medium transition-colors">
                   Agendar Consulta →
                 </Link>
               </li>
