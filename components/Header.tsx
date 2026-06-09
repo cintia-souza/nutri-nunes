@@ -34,18 +34,42 @@ const NAV_CLIENTE = [
   { href: '/cliente/perfil', label: 'Perfil' },
 ];
 
+function NavLinks({ links, pathname }: { links: typeof NAV_PUBLIC; pathname: string }) {
+  function isActive(href: string) {
+    if (href === '/admin' || href === '/cliente') return pathname === href;
+    return pathname.startsWith(href);
+  }
+
+  return (
+    <>
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={`text-sm px-3.5 py-2 rounded-xl transition-all duration-200 ${
+            isActive(link.href)
+              ? 'text-sage-700 bg-sage-50 font-medium'
+              : 'text-warm-600 hover:text-sage-700 hover:bg-sage-50'
+          }`}
+        >
+          {link.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setReady(true); }, []);
 
   const isAdmin = pathname.startsWith('/admin');
   const isCliente = pathname.startsWith('/cliente');
   const isAuth = isAdmin || isCliente;
-
   const navLinks = isAdmin ? NAV_ADMIN : isCliente ? NAV_CLIENTE : NAV_PUBLIC;
 
   async function handleLogout() {
@@ -53,15 +77,10 @@ export default function Header() {
     router.push('/login');
   }
 
-  function isActive(href: string) {
-    if (href === '/admin' || href === '/cliente') return pathname === href;
-    return pathname.startsWith(href);
-  }
-
   return (
     <header className="glass border-b border-cream-200/60 sticky top-0 z-50">
       <nav className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between" aria-label="Navegação principal">
-        <Link href={isAdmin ? '/admin' : isCliente ? '/cliente' : '/'} className="flex items-center gap-2.5 group">
+        <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-sage-800 to-sage-500 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200 relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.15),transparent)]" />
             <span className="text-white font-bold text-sm tracking-tight relative">A</span>
@@ -72,36 +91,27 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {mounted && navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm px-3.5 py-2 rounded-xl transition-all duration-200 ${
-                isActive(link.href)
-                  ? 'text-sage-700 bg-sage-50 font-medium'
-                  : 'text-warm-600 hover:text-sage-700 hover:bg-sage-50'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-
-          {mounted && isAuth ? (
-            <button
-              onClick={handleLogout}
-              className="ml-3 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
-            >
-              Sair
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="ml-3 bg-sage-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-sage-700 shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px] flex items-center"
-            >
-              Portal do Paciente
-            </Link>
+        {/* Desktop Nav — só renderiza após mount para evitar hydration mismatch */}
+        <div className="hidden md:flex items-center gap-1" suppressHydrationWarning>
+          {ready && (
+            <>
+              <NavLinks links={navLinks} pathname={pathname} />
+              {isAuth ? (
+                <button
+                  onClick={handleLogout}
+                  className="ml-3 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
+                >
+                  Sair
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="ml-3 bg-sage-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-sage-700 shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px] flex items-center"
+                >
+                  Portal do Paciente
+                </Link>
+              )}
+            </>
           )}
         </div>
 
@@ -123,7 +133,7 @@ export default function Header() {
       </nav>
 
       {/* Mobile Nav */}
-      {menuOpen && mounted && (
+      {menuOpen && ready && (
         <div className="md:hidden glass border-t border-cream-200/60 animate-fade-slide-in">
           <div className="px-6 py-4 space-y-1">
             {navLinks.map((link) => (
@@ -131,9 +141,7 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className={`block px-4 py-3 rounded-xl transition-all text-base ${
-                  isActive(link.href) ? 'text-sage-700 bg-sage-50 font-medium' : 'text-warm-700 hover:text-sage-700 hover:bg-sage-50'
-                }`}
+                className="block px-4 py-3 rounded-xl transition-all text-base text-warm-700 hover:text-sage-700 hover:bg-sage-50"
               >
                 {link.label}
               </Link>
