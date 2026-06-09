@@ -12,17 +12,17 @@
   --color-sage-800: #384832;
   --color-sage-900: #2f3c2b;
 
-  --color-cream-50: #fefdfb;
-  --color-cream-100: #faf8f4;
-  --color-cream-200: #f3f0e8;
-  --color-cream-300: #e8e3d8;
+  --color-cream-50: var(--t-cream-50);
+  --color-cream-100: var(--t-cream-100);
+  --color-cream-200: var(--t-cream-200);
+  --color-cream-300: var(--t-cream-300);
 
-  --color-warm-400: #9c9588;
-  --color-warm-500: #7a746a;
-  --color-warm-600: #5c5850;
-  --color-warm-700: #3d3a35;
-  --color-warm-800: #2a2825;
-  --color-warm-900: #1a1917;
+  --color-warm-400: var(--t-warm-400);
+  --color-warm-500: var(--t-warm-500);
+  --color-warm-600: var(--t-warm-600);
+  --color-warm-700: var(--t-warm-700);
+  --color-warm-800: var(--t-warm-800);
+  --color-warm-900: var(--t-warm-900);
 
   --color-accent-500: #5b9a6b;
   --color-accent-600: #4a8359;
@@ -38,57 +38,73 @@
   --color-gold-600: #9a7b24;
 }
 
-/* ─── TEMA LIGHT (default) ─── */
+/* ─── TOKENS DE TEMA (mudados pela classe .dark) ─── */
 :root {
-  --bg-primary: #fefdfb;
-  --bg-card: rgba(255, 255, 255, 0.8);
-  --bg-card-solid: #ffffff;
-  --bg-elevated: #faf8f4;
-  --border-color: #f3f0e8;
-  --text-primary: #2a2825;
-  --text-secondary: #5c5850;
-  --text-muted: #9c9588;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --scrollbar-track: #f3f0e8;
-  --scrollbar-thumb: #b3c0a4;
+  --t-cream-50: #fefdfb;
+  --t-cream-100: #faf8f4;
+  --t-cream-200: #f3f0e8;
+  --t-cream-300: #e8e3d8;
+
+  --t-warm-400: #9c9588;
+  --t-warm-500: #7a746a;
+  --t-warm-600: #5c5850;
+  --t-warm-700: #3d3a35;
+  --t-warm-800: #2a2825;
+  --t-warm-900: #1a1917;
+
+  --t-surface: #ffffff;
+  --t-surface-alpha: rgba(255, 255, 255, 0.8);
+  --t-glass: rgba(255, 255, 255, 0.7);
+  --t-body: #fefdfb;
 }
 
-/* ─── TEMA DARK ─── */
 .dark {
-  --bg-primary: #141413;
-  --bg-card: rgba(30, 30, 28, 0.8);
-  --bg-card-solid: #1e1e1c;
-  --bg-elevated: #1a1a18;
-  --border-color: #2d2d2a;
-  --text-primary: #f3f0e8;
-  --text-secondary: #b3ada3;
-  --text-muted: #7a746a;
-  --glass-bg: rgba(20, 20, 19, 0.75);
-  --scrollbar-track: #1e1e1c;
-  --scrollbar-thumb: #44583c;
+  --t-cream-50: #111110;
+  --t-cream-100: #181816;
+  --t-cream-200: #252522;
+  --t-cream-300: #333330;
 
-  --color-cream-50: #141413;
-  --color-cream-100: #1a1a18;
-  --color-cream-200: #2d2d2a;
-  --color-cream-300: #3d3a35;
+  --t-warm-400: #8a847a;
+  --t-warm-500: #a39d93;
+  --t-warm-600: #bdb7ad;
+  --t-warm-700: #d4cfc7;
+  --t-warm-800: #ece9e3;
+  --t-warm-900: #faf8f4;
 
-  --color-warm-400: #7a746a;
-  --color-warm-500: #9c9588;
-  --color-warm-600: #b3ada3;
-  --color-warm-700: #d4cfc7;
-  --color-warm-800: #f3f0e8;
-  --color-warm-900: #fefdfb;
+  --t-surface: #1c1c1a;
+  --t-surface-alpha: rgba(28, 28, 26, 0.85);
+  --t-glass: rgba(17, 17, 16, 0.8);
+  --t-body: #111110;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--t-body);
+  color: var(--t-warm-800);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── OVERRIDES para bg-white no dark ─── */
+.dark [class*="bg-white"] {
+  background-color: var(--t-surface) !important;
+}
+.dark [class*="bg-white/80"] {
+  background-color: var(--t-surface-alpha) !important;
+}
+
+.glass {
+  background: var(--t-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-sage-500), var(--color-sage-300));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 *:focus-visible {
@@ -98,31 +114,8 @@ body {
 }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
-
-/* Glass adapta ao tema */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Cards e backgrounds adaptáveis */
-.dark .bg-white { background-color: var(--bg-card-solid) !important; }
-.dark .bg-white\/80 { background-color: var(--bg-card) !important; }
-.dark .border-cream-200 { border-color: var(--border-color) !important; }
-.dark .border-cream-100 { border-color: rgba(45, 45, 42, 0.5) !important; }
-.dark .bg-cream-50 { background-color: var(--bg-elevated) !important; }
-.dark .bg-cream-100 { background-color: var(--bg-elevated) !important; }
-
-/* Texto gradiente */
-.text-gradient {
-  background: linear-gradient(135deg, var(--color-sage-600), var(--color-sage-400));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+::-webkit-scrollbar-track { background: var(--t-cream-200); }
+::-webkit-scrollbar-thumb { background: var(--color-sage-300); border-radius: 3px; }
 
 /* Animações */
 @keyframes checkPop {
@@ -130,17 +123,14 @@ body {
   50% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
-
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
