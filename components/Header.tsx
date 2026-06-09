@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_PUBLIC = [
   { href: '/#sobre', label: 'Sobre' },
@@ -95,6 +96,7 @@ export default function Header() {
           {ready && (
             <>
               <NavLinks links={navLinks} pathname={pathname} />
+              <ThemeToggle />
               {isAuth ? (
                 <button
                   onClick={handleLogout}
@@ -152,6 +154,10 @@ export default function Header() {
                 Portal do Paciente
               </Link>
             )}
+            <div className="flex items-center gap-2 px-4 pt-3 border-t border-cream-200 mt-2">
+              <span className="text-xs text-warm-400">Tema:</span>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       )}
