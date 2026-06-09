@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { hojeLocal } from '@/lib/datas';
 
 interface Agendamento {
   id: string;
@@ -80,7 +81,7 @@ export default function AgendaAdminPage() {
 
   const filtrados = filtro === 'todos' ? agendamentos : agendamentos.filter(a => a.status === filtro);
   const pendentes = agendamentos.filter(a => a.status === 'PENDENTE').length;
-  const hoje = agendamentos.filter(a => a.data === new Date().toISOString().split('T')[0] && a.status === 'CONFIRMADO').length;
+  const hojeConsultas = agendamentos.filter(a => a.data === hojeLocal() && a.status === 'CONFIRMADO').length;
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8">
@@ -88,7 +89,7 @@ export default function AgendaAdminPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-warm-800">Agenda</h1>
-          <p className="text-warm-500 mt-1">{pendentes} pendentes • {hoje} consultas hoje</p>
+          <p className="text-warm-500 mt-1">{pendentes} pendentes • {hojeConsultas} consultas hoje</p>
         </div>
         <button onClick={() => setCriandoManual(true)} className="bg-sage-600 text-white px-5 py-3 rounded-xl font-medium hover:bg-sage-700 transition-all min-h-[48px]">
           + Agendar Manual

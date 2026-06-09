@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { hojeLocal, formatarDataExtenso, formatarDataCurta, montarData } from '@/lib/datas';
 
 const HORARIOS = [
   { periodo: 'Manhã', slots: ['08:00', '09:00', '10:00', '11:00'] },
@@ -41,14 +42,14 @@ export default function AgendamentoPage() {
     return celulas;
   }, [ano, mes]);
 
-  const hoje = new Date();
-  const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+  const hojeStr = hojeLocal();
 
-  const dataSel = dia ? `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
+  const dataSel = dia ? montarData(ano, mes, dia) : '';
   const nomeMes = new Date(ano, mes).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   function podeMesAnterior() {
-    return !(ano === hoje.getFullYear() && mes === hoje.getMonth());
+    const [aH, mH] = hojeStr.split('-').map(Number);
+    return !(ano === aH && mes === mH - 1);
   }
 
   function mudarMes(dir: number) {
@@ -60,14 +61,13 @@ export default function AgendamentoPage() {
 
   function diaDisabled(d: number) {
     const date = new Date(ano, mes, d);
-    if (date.getDay() === 0) return true; // domingo
-    const str = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    return str < hojeStr;
+    if (date.getDay() === 0) return true;
+    return montarData(ano, mes, d) < hojeStr;
   }
 
   async function clickDia(d: number) {
     setDia(d); setHorario('');
-    const str = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const str = montarData(ano, mes, d);
     try {
       const res = await fetch(`/api/agendamento?data=${str}`);
       if (res.ok) setOcupados(await res.json());
@@ -78,13 +78,15 @@ export default function AgendamentoPage() {
   async function confirmar() {
     if (!usuario || !dataSel || !horario || !tipo) return;
     setErro('');
-    const res = await fetch('/api/agendamento', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, data: dataSel, horario, nome: usuario.nome, email: usuario.email, telefone: usuario.telefone || '', mensagem }),
-    });
-    if (res.ok) setEnviado(true);
-    else { const e = await res.json(); setErro(e.error || 'Erro ao agendar.'); }
+    try {
+      const res = await fetch('/api/agendamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, data: dataSel, horario, nome: usuario.nome, email: usuario.email, telefone: usuario.telefone || '', mensagem }),
+      });
+      if (res.ok) setEnviado(true);
+      else { const e = await res.json(); setErro(e.error || 'Erro ao agendar.'); }
+    } catch { setErro('Erro de conexão. Tente novamente.'); }
   }
 
   // --- TELA DE SUCESSO ---
@@ -99,7 +101,7 @@ export default function AgendamentoPage() {
           <p className="text-warm-500 text-sm mb-6">Você receberá um email quando for confirmado.</p>
           <div className="bg-cream-100 rounded-xl p-4 text-left text-sm text-warm-600 space-y-1 mb-6">
             <p><strong>{TIPOS.find(t => t.id === tipo)?.nome}</strong></p>
-            <p>{new Date(dataSel + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {horario}</p>
+            <p>{formatarDataExtenso(dataSel)} às {horario}</p>
           </div>
           <div className="flex gap-3 justify-center">
             <Link href="/cliente" className="bg-sage-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-sage-700">Minha Dieta</Link>
@@ -160,7 +162,7 @@ export default function AgendamentoPage() {
             if (d === null) return <span key={i} className="h-9" />;
             const off = diaDisabled(d);
             const sel = dia === d;
-            const ehHoje = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` === hojeStr;
+            const ehHoje = montarData(ano, mes, d) === hojeStr;
             return (
               <button
                 key={i}
@@ -182,7 +184,7 @@ export default function AgendamentoPage() {
         {dia && !diaDisabled(dia) && (
           <div className="mt-3 text-center">
             <span className="inline-block bg-sage-50 text-sage-700 text-xs font-medium px-3 py-1 rounded-lg">
-              {new Date(dataSel + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' })}
+              {formatarDataExtenso(dataSel)}
             </span>
           </div>
         )}
@@ -228,7 +230,7 @@ export default function AgendamentoPage() {
           <div className="bg-sage-50 border border-sage-200 rounded-2xl p-4 text-sm text-sage-800 space-y-1">
             <p className="font-semibold">Resumo</p>
             <p>{TIPOS.find(t => t.id === tipo)?.icon} {TIPOS.find(t => t.id === tipo)?.nome} — {TIPOS.find(t => t.id === tipo)?.preco}</p>
-            <p>📅 {new Date(dataSel + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} às {horario}</p>
+            <p>📅 {formatarDataCurta(dataSel)} às {horario}</p>
             <p className="text-sage-600 text-xs">👤 {usuario?.nome}</p>
           </div>
 
