@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Dieta, Receita } from '@/types';
 import ModalReceita from '@/components/ModalReceita';
 import TelemetriaAviso from '@/components/TelemetriaAviso';
+import { hojeLocal } from '@/lib/datas';
 
 const LABELS: Record<string, { emoji: string; nome: string }> = {
   CAFE_DA_MANHA: { emoji: '☀️', nome: 'Café da Manhã' },
@@ -27,8 +29,9 @@ export default function ClienteDashboard() {
   const [aguaSalva, setAguaSalva] = useState(false);
 
   useEffect(() => {
+    const hoje = hojeLocal();
     fetch('/api/cliente/dieta').then(r => r.json()).then(setDieta);
-    fetch('/api/cliente/checks?data=' + new Date().toISOString().split('T')[0])
+    fetch('/api/cliente/checks?data=' + hoje)
       .then(r => r.json()).then((data) => {
         const map: Record<string, boolean> = {};
         data.forEach((c: { refeicaoId: string; realizada: boolean }) => { map[c.refeicaoId] = c.realizada; });
@@ -46,7 +49,7 @@ export default function ClienteDashboard() {
     await fetch('/api/cliente/checks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refeicaoId, realizada: novo, data: new Date().toISOString().split('T')[0] }),
+      body: JSON.stringify({ refeicaoId, realizada: novo, data: hojeLocal() }),
     });
   }
 
@@ -55,7 +58,7 @@ export default function ClienteDashboard() {
     await fetch('/api/cliente/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: feedback, data: new Date().toISOString().split('T')[0] }),
+      body: JSON.stringify({ texto: feedback, data: hojeLocal() }),
     });
     setFeedback('');
     setFeedbackEnviado(true);
@@ -70,7 +73,7 @@ export default function ClienteDashboard() {
     await fetch('/api/cliente/progresso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ aguaMl: aguaHoje, data: new Date().toISOString().split('T')[0] }),
+      body: JSON.stringify({ aguaMl: aguaHoje, data: hojeLocal() }),
     });
     setAguaSalva(true);
     setTimeout(() => setAguaSalva(false), 3000);
@@ -110,6 +113,22 @@ export default function ClienteDashboard() {
 
       {/* Telemetria semanal */}
       <TelemetriaAviso />
+
+      {/* Atalho agendar consulta */}
+      <Link href="/cliente/agendamento" className="block bg-gradient-to-r from-sage-600 to-sage-700 rounded-2xl p-5 mb-6 shadow-sm hover:shadow-md transition-all group">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-lg">📅</span>
+            <div>
+              <p className="text-white font-semibold text-sm">Agendar Consulta</p>
+              <p className="text-sage-200 text-xs">Marque seu próximo horário</p>
+            </div>
+          </div>
+          <svg className="w-5 h-5 text-white/70 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
 
       {/* Métricas do dia — cards visuais */}
       <div className="grid grid-cols-3 gap-3 mb-6">
