@@ -6,6 +6,7 @@ import { Dieta, Receita } from '@/types';
 import ModalReceita from '@/components/ModalReceita';
 import TelemetriaAviso from '@/components/TelemetriaAviso';
 import { hojeLocal } from '@/lib/datas';
+import PrintDieta from '@/components/PrintDieta';
 
 const LABELS: Record<string, { emoji: string; nome: string }> = {
   CAFE_DA_MANHA: { emoji: '☀️', nome: 'Café da Manhã' },
@@ -315,6 +316,17 @@ export default function ClienteDashboard() {
       </div>
 
       {receitaAberta && <ModalReceita receita={receitaAberta} onClose={() => setReceitaAberta(null)} />}
+
+      {/* Botão flutuante PDF */}
+      <PrintDieta
+        titulo={dieta.titulo}
+        refeicoes={dieta.refeicoes.map(r => ({
+          tipo: r.tipo,
+          horarioSugerido: r.horarioSugerido ?? undefined,
+          alimentos: r.alimentos.map(a => ({ nome: a.nome, quantidade: a.quantidade, observacao: a.observacao ?? undefined })),
+        }))}
+        variant="fab"
+      />
     </main>
   );
 }
