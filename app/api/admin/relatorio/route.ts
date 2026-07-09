@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const clienteId = req.nextUrl.searchParams.get('clienteId');
   if (!clienteId) return NextResponse.json({ error: 'clienteId obrigatório' }, { status: 400 });
 
-  const [cliente, checks, progressos, feedbacks] = await Promise.all([
+  const [cliente, checks, progressos, feedbacks, habitos, avaliacoesNutricionais] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: clienteId },
       select: { id: true, nome: true, email: true, pesoAtual: true, altura: true, objetivo: true },
@@ -29,7 +29,16 @@ export async function GET(req: NextRequest) {
       orderBy: { criadoEm: 'desc' },
       take: 20,
     }),
+    prisma.registroHabito.findMany({
+      where: { clienteId },
+      orderBy: { data: 'desc' },
+      take: 60,
+    }),
+    prisma.avaliacaoNutricional.findMany({
+      where: { clienteId },
+      orderBy: { data: 'asc' },
+    }),
   ]);
 
-  return NextResponse.json({ cliente, checks, progressos, feedbacks });
+  return NextResponse.json({ cliente, checks, progressos, feedbacks, habitos, avaliacoesNutricionais });
 }

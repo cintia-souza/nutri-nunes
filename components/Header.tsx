@@ -4,27 +4,31 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import { User, CalendarDays, BookOpen, TrendingUp, Star, UserCircle, BarChart3, Info, Briefcase, CreditCard, PenSquare, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
 
-const NAV_PUBLIC = [
-  { href: '/#sobre', label: 'Sobre' },
-  { href: '/#servicos', label: 'Serviços' },
-  { href: '/#planos', label: 'Planos' },
-  { href: '/blog', label: 'Blog' },
+interface NavItem { href: string; label: string; icon: LucideIcon; }
+
+const NAV_PUBLIC: NavItem[] = [
+  { href: '/#sobre', label: 'Sobre', icon: Info },
+  { href: '/#servicos', label: 'Serviços', icon: Briefcase },
+  { href: '/#planos', label: 'Planos', icon: CreditCard },
+  { href: '/blog', label: 'Blog', icon: PenSquare },
 ];
 
-const NAV_CLIENTE = [
-  { href: '/cliente', label: 'Minha Dieta' },
-  { href: '/cliente/agendamento', label: 'Agendar' },
-  { href: '/cliente/receitas', label: 'Receitas' },
-  { href: '/cliente/progresso', label: 'Progresso' },
-  { href: '/cliente/avaliacao', label: 'Avaliar' },
-  { href: '/cliente/perfil', label: 'Perfil' },
+const NAV_CLIENTE: NavItem[] = [
+  { href: '/cliente', label: 'Início', icon: Info },
+  { href: '/cliente/dieta', label: 'Minha Dieta', icon: BookOpen },
+  { href: '/cliente/habitos', label: 'Hábitos', icon: BarChart3 },
+  { href: '/cliente/agendamento', label: 'Agendar', icon: CalendarDays },
+  { href: '/cliente/progresso', label: 'Progresso', icon: TrendingUp },
+  { href: '/cliente/avaliacao', label: 'Avaliar', icon: Star },
+  { href: '/cliente/perfil', label: 'Perfil', icon: UserCircle },
 ];
 
-function NavLinks({ links, pathname }: { links: typeof NAV_PUBLIC; pathname: string }) {
+function NavLinks({ links, pathname }: { links: NavItem[]; pathname: string }) {
   function isActive(href: string) {
-    if (href === '/admin' || href === '/cliente') return pathname === href;
-    return pathname.startsWith(href);
+    if (href === '/cliente') return pathname === href;
+    return pathname.startsWith(href) && href !== '/cliente';
   }
 
   return (
@@ -33,12 +37,13 @@ function NavLinks({ links, pathname }: { links: typeof NAV_PUBLIC; pathname: str
         <Link
           key={link.href}
           href={link.href}
-          className={`text-sm px-3.5 py-2 rounded-xl transition-all duration-200 ${
+          className={`flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl transition-all duration-200 ${
             isActive(link.href)
               ? 'text-sage-700 bg-sage-50 font-medium'
               : 'text-warm-600 hover:text-sage-700 hover:bg-sage-50'
           }`}
         >
+          <link.icon className="w-4 h-4" />
           {link.label}
         </Link>
       ))}
@@ -72,10 +77,9 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2.5 group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Adriana Nutrição" className="h-11 w-auto object-contain" style={{maxWidth:'220px'}} />
-
         </Link>
 
-        {/* Desktop Nav — só renderiza após mount para evitar hydration mismatch */}
+        {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1" suppressHydrationWarning>
           {ready && (
             <>
@@ -84,17 +88,17 @@ export default function Header() {
               {isAuth ? (
                 <button
                   onClick={handleLogout}
-                  className="ml-3 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
+                  className="ml-3 flex items-center gap-1.5 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
                 >
-                  Sair
+                  <LogOut className="w-4 h-4" /> Sair
                 </button>
               ) : (
                 <Link
                   href="/login"
-                  className="ml-3 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px] flex items-center"
+                  className="ml-3 flex items-center gap-1.5 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px]"
                   style={{backgroundColor:'#ff7a55'}}
                 >
-                  Portal do Paciente
+                  <User className="w-4 h-4" /> Portal do Paciente
                 </Link>
               )}
             </>
@@ -108,13 +112,7 @@ export default function Header() {
           aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
           aria-expanded={menuOpen}
         >
-          <svg className="w-5 h-5 text-warm-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            {menuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+          {menuOpen ? <X className="w-5 h-5 text-warm-700" /> : <Menu className="w-5 h-5 text-warm-700" />}
         </button>
       </nav>
 
@@ -127,16 +125,19 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="block px-4 py-3 rounded-xl transition-all text-base text-warm-700 hover:text-sage-700 hover:bg-sage-50"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-base text-warm-700 hover:text-sage-700 hover:bg-sage-50"
               >
+                <link.icon className="w-5 h-5" />
                 {link.label}
               </Link>
             ))}
             {isAuth ? (
-              <button onClick={handleLogout} className="w-full text-left text-danger px-4 py-3 rounded-xl hover:bg-red-50 mt-2">Sair</button>
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 text-danger px-4 py-3 rounded-xl hover:bg-red-50 mt-2">
+                <LogOut className="w-5 h-5" /> Sair
+              </button>
             ) : (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="block text-white text-center px-4 py-3 rounded-xl font-medium mt-2" style={{backgroundColor:'#ff7a55'}}>
-                Portal do Paciente
+              <Link href="/login" onClick={() => setMenuOpen(false)} className="flex items-center justify-center gap-2 text-white text-center px-4 py-3 rounded-xl font-medium mt-2" style={{backgroundColor:'#ff7a55'}}>
+                <User className="w-5 h-5" /> Portal do Paciente
               </Link>
             )}
             <div className="flex items-center gap-2 px-4 pt-3 border-t border-cream-200 mt-2">
