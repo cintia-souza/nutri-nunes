@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 
@@ -41,6 +42,7 @@ export default async function HomePage() {
 
   try {
     const tenantId = await resolveTenantId();
+    if (!tenantId) notFound();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const p = prisma as any;
     if (tenantId) {
