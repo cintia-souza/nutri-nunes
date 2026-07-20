@@ -1,4 +1,15 @@
-export type Role = 'ADMIN' | 'CLIENTE';
+export type Role = 'SUPERADMIN' | 'ADMIN' | 'CLIENTE';
+
+export interface Tenant {
+  id: string;
+  nome: string;
+  email: string;
+  crn?: string;
+  slug: string;
+  logoUrl?: string;
+  ativo: boolean;
+  criadoEm: Date;
+}
 
 export type TipoRefeicao =
   | 'CAFE_DA_MANHA'
@@ -13,6 +24,7 @@ export interface Usuario {
   nome: string;
   email: string;
   role: Role;
+  tenantId: string;
   telefone?: string;
   dataNascimento?: Date;
   criadoEm: Date;

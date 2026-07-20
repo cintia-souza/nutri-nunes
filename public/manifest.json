@@ -1,7 +1,7 @@
 {
-  "name": "Adriana Rodrigues - Nutrição Inteligente",
-  "short_name": "NutriAR",
-  "description": "Acompanhamento nutricional personalizado",
+  "name": "NutriHub",
+  "short_name": "NutriHub",
+  "description": "Plataforma SaaS de acompanhamento nutricional personalizado",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",

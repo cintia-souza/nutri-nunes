@@ -3,18 +3,32 @@ import { verifyToken } from '@/lib/auth';
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const hostname = req.headers.get('host') || '';
+
+  let slug = '';
+
+  if (process.env.NODE_ENV === 'development') {
+    slug = process.env.TENANT_SLUG_DEV || '';
+  } else {
+    slug = hostname.split('.')[0];
+
+    if (slug === 'localhost' || slug === 'www' || hostname.includes('vercel.dev')) {
+      slug = '';
+    }
+  }
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-tenant-slug', slug);
+
   const token = req.cookies.get('token')?.value;
   const refreshToken = req.cookies.get('refreshToken')?.value;
 
-  // Resolve session uma única vez
   let session = token ? await verifyToken(token) : null;
 
-  // Se token expirado, tenta refresh
   if (!session && refreshToken) {
     session = await verifyToken(refreshToken);
   }
 
-  // Proteger páginas
   if (pathname.startsWith('/cliente') || pathname.startsWith('/admin')) {
     if (!session) {
       const res = NextResponse.redirect(new URL('/login', req.url));
@@ -22,7 +36,7 @@ export async function middleware(req: NextRequest) {
       res.cookies.set('refreshToken', '', { maxAge: 0, path: '/' });
       return res;
     }
-    if (pathname.startsWith('/admin') && session.role !== 'ADMIN') {
+    if (pathname.startsWith('/admin') && session.role !== 'ADMIN' && session.role !== 'SUPERADMIN') {
       return NextResponse.redirect(new URL('/cliente', req.url));
     }
     if (pathname.startsWith('/cliente') && session.role !== 'CLIENTE') {
@@ -32,7 +46,7 @@ export async function middleware(req: NextRequest) {
 
   // Proteger APIs admin
   if (pathname.startsWith('/api/admin')) {
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
   }
@@ -44,9 +58,21 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // Retorna a requisição aplicando os novos headers que carregam o slug do inquilino
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
+// Atualizamos o matcher para incluir a rota raiz '/' e monitorar o tenant globalmente
 export const config = {
-  matcher: ['/cliente/:path*', '/admin/:path*', '/api/admin/:path*', '/api/cliente/:path*'],
+  matcher: [
+    '/',
+    '/cliente/:path*',
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/api/cliente/:path*'
+  ],
 };

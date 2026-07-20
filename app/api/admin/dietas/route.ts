@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
-// GET — buscar dieta ativa de um cliente (para edição)
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') return NextResponse.json(null, { status: 403 });
+  const { tenantId } = session;
 
   const clienteId = req.nextUrl.searchParams.get('clienteId');
   if (!clienteId) return NextResponse.json({ error: 'clienteId obrigatório' }, { status: 400 });
 
   const dieta = await prisma.dieta.findFirst({
-    where: { clienteId, ativa: true },
+    where: { tenantId, clienteId, ativa: true },
     include: {
       refeicoes: {
         include: { alimentos: { include: { receita: true } } },
@@ -19,44 +19,37 @@ export async function GET(req: NextRequest) {
       },
     },
   });
-
   return NextResponse.json(dieta);
 }
 
-// POST — criar nova dieta (desativa anteriores)
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') return NextResponse.json(null, { status: 403 });
+  const { tenantId } = session;
 
   const { clienteId, titulo, refeicoes } = await req.json();
 
-  await prisma.dieta.updateMany({
-    where: { clienteId, ativa: true },
-    data: { ativa: false },
-  });
+  // Verifica que o cliente pertence ao tenant antes de criar dieta
+  const cliente = await prisma.usuario.findFirst({ where: { id: clienteId, tenantId }, select: { id: true } });
+  if (!cliente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 });
+
+  await prisma.dieta.updateMany({ where: { tenantId, clienteId, ativa: true }, data: { ativa: false } });
 
   const dieta = await prisma.dieta.create({
     data: {
+      tenantId,
       clienteId,
       titulo,
       refeicoes: {
         create: refeicoes.map((ref: { tipo: string; horarioSugerido?: string; alimentos: { nome: string; quantidade: string; observacao?: string; receitaId?: string }[] }) => ({
           tipo: ref.tipo,
           horarioSugerido: ref.horarioSugerido,
-          alimentos: {
-            create: ref.alimentos.map((al) => ({
-              nome: al.nome,
-              quantidade: al.quantidade,
-              observacao: al.observacao,
-              receitaId: al.receitaId,
-            })),
-          },
+          alimentos: { create: ref.alimentos.map((al) => ({ nome: al.nome, quantidade: al.quantidade, observacao: al.observacao, receitaId: al.receitaId })) },
         })),
       },
     },
     include: { refeicoes: { include: { alimentos: true } } },
   });
-
   return NextResponse.json(dieta, { status: 201 });
 }
 

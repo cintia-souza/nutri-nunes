@@ -7,9 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
 enum Role {
-  ADMIN
-  CLIENTE
+  SUPERADMIN // Dono da plataforma (você)
+  ADMIN      // Nutricionista assinante
+  CLIENTE    // Paciente
 }
 
 enum TipoRefeicao {
@@ -21,41 +26,110 @@ enum TipoRefeicao {
   CEIA
 }
 
+enum StatusAgendamento {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  REALIZADO
+}
+
+enum TipoEntradaDiario {
+  NOTA
+  MEDIDA
+  AVALIACAO_NUTRICIONAL
+  CONSULTA
+}
+
+enum TipoPergunta {
+  TEXTO
+  CHECKBOX
+}
+
+// ─────────────────────────────────────────────
+// TENANT — Nutricionista assinante da plataforma
+// ─────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  crn       String?
+  // slug define o subdomínio: maria.nutrinunes.com
+  // Regra: lowercase, sem espaços, sem caracteres especiais
+  slug      String   @unique
+  logoUrl   String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  // Relações — tudo que pertence a este tenant
+  usuarios    Usuario[]
+  dietas      Dieta[]
+  posts       Post[]
+  formularios Formulario[]
+  agendamentos Agendamento[]
+  configSite  ConfigSite?
+  servicos    Servico[]
+  planos      Plano[]
+  receitas    Receita[]
+
+  @@index([slug])
+}
+
+// ─────────────────────────────────────────────
+// USUARIO — Pacientes E admins (nutricionistas)
+// ─────────────────────────────────────────────
+
 model Usuario {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   nome           String
-  email          String   @unique
+  email          String
   senhaHash      String
-  role           Role     @default(CLIENTE)
+  role           Role      @default(CLIENTE)
   telefone       String?
   dataNascimento DateTime?
   pesoAtual      Float?
   altura         Float?
   objetivo       String?
-  criadoEm       DateTime @default(now())
-  atualizadoEm   DateTime @updatedAt
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @updatedAt
 
-  dietas          Dieta[]
-  checksRefeicao  CheckRefeicao[]
-  feedbacks       Feedback[]
-  progressos      RegistroProgresso[]
-  avaliacoes      Avaliacao[]
-  habitos         RegistroHabito[]
+  // Isolamento por tenant
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  dietas                 Dieta[]
+  checksRefeicao         CheckRefeicao[]
+  feedbacks              Feedback[]
+  progressos             RegistroProgresso[]
+  avaliacoes             Avaliacao[]
+  habitos                RegistroHabito[]
   avaliacoesNutricionais AvaliacaoNutricional[]
-  entradasDiario  EntradaDiario[]
-  formularios     Formulario[]
+  entradasDiario         EntradaDiario[]
+  formularios            Formulario[]
+
+  // Email único por tenant (não globalmente único)
+  @@unique([tenantId, email])
+  @@index([tenantId, role])
 }
 
-model Dieta {
-  id        String   @id @default(cuid())
-  titulo    String
-  ativa     Boolean  @default(true)
-  criadaEm  DateTime @default(now())
+// ─────────────────────────────────────────────
+// DIETA e dependentes
+// ─────────────────────────────────────────────
 
+model Dieta {
+  id       String   @id @default(cuid())
+  titulo   String
+  ativa    Boolean  @default(true)
+  criadaEm DateTime @default(now())
+
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clienteId String
   cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   refeicoes Refeicao[]
+
+  @@index([tenantId, clienteId])
 }
 
 model Refeicao {
@@ -83,6 +157,7 @@ model Alimento {
   receita   Receita? @relation(fields: [receitaId], references: [id])
 }
 
+// Receita agora pertence ao tenant (biblioteca de receitas por nutricionista)
 model Receita {
   id           String   @id @default(cuid())
   titulo       String
@@ -91,17 +166,26 @@ model Receita {
   tempoPreparo String?
   videoUrl     String?
 
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   alimentos Alimento[]
+
+  @@index([tenantId])
 }
 
+// ─────────────────────────────────────────────
+// REGISTROS DO PACIENTE (herdados via clienteId → tenantId)
+// Não precisam de tenantId direto: o isolamento vem pelo JOIN com Usuario
+// ─────────────────────────────────────────────
+
 model CheckRefeicao {
-  id        String   @id @default(cuid())
-  data      String   // YYYY-MM-DD
-  realizada Boolean  @default(false)
+  id        String  @id @default(cuid())
+  data      String  // YYYY-MM-DD
+  realizada Boolean @default(false)
 
   clienteId  String
-  cliente    Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
+  cliente    Usuario  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   refeicaoId String
   refeicao   Refeicao @relation(fields: [refeicaoId], references: [id], onDelete: Cascade)
 
@@ -109,20 +193,20 @@ model CheckRefeicao {
 }
 
 model Feedback {
-  id       String   @id @default(cuid())
-  data     String
-  texto    String
-  criadoEm DateTime @default(now())
+  id        String   @id @default(cuid())
+  data      String
+  texto     String
+  criadoEm  DateTime @default(now())
 
   clienteId String
   cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model RegistroProgresso {
-  id      String   @id @default(cuid())
-  data    String
-  peso    Float?
-  aguaMl  Int?
+  id       String   @id @default(cuid())
+  data     String
+  peso     Float?
+  aguaMl   Int?
   criadoEm DateTime @default(now())
 
   clienteId String
@@ -131,71 +215,87 @@ model RegistroProgresso {
   @@unique([clienteId, data])
 }
 
-model Post {
-  id         String   @id @default(cuid())
-  titulo     String
-  slug       String   @unique
-  resumo     String
-  conteudo   String
-  imagemUrl  String?
-  publicado  Boolean  @default(false)
+model RegistroHabito {
+  id                 String   @id @default(cuid())
+  data               String   // YYYY-MM-DD
+  aderenciaDieta     Int      @default(0)
+  variedadeAlimentar Int      @default(0)
+  aceitacaoNovos     Int      @default(0)
+  hidratacao         Int      @default(0)
+  comportamentoMesa  Int      @default(0)
+
+  acFrutas         Boolean?
+  acVerduras       Boolean?
+  acLegumes        Boolean?
+  acProteinas      Boolean?
+  acCereais        Boolean?
+  acAgua           Boolean?
+
+  refrigerante     Boolean?
+  doces            Boolean?
+  fastFood         Boolean?
+  ultraprocessados Boolean?
+  beliscos         Boolean?
+
+  observacao String?
   criadoEm   DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, data])
 }
 
-enum StatusAgendamento {
-  PENDENTE
-  CONFIRMADO
-  CANCELADO
-  REALIZADO
+model AvaliacaoNutricional {
+  id   String @id @default(cuid())
+  data String
+  tipo String
+
+  frutas        Int @default(0)
+  verduras      Int @default(0)
+  legumes       Int @default(0)
+  proteinas     Int @default(0)
+  cereais       Int @default(0)
+  agua          Int @default(0)
+
+  refrigerantes    Int @default(0)
+  doces            Int @default(0)
+  fastFood         Int @default(0)
+  ultraprocessados Int @default(0)
+  beliscos         Int @default(0)
+
+  observacao String?
+  criadoEm   DateTime @default(now())
+
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId, data])
 }
 
-model Agendamento {
-  id        String             @id @default(cuid())
-  tipo      String
-  data      String
-  horario   String
-  nome      String
-  email     String
-  telefone  String
-  mensagem  String?
-  status    StatusAgendamento  @default(PENDENTE)
-  criadoEm  DateTime           @default(now())
-}
+model EntradaDiario {
+  id    String            @id @default(cuid())
+  data  String
+  tipo  TipoEntradaDiario
+  titulo String?
+  texto  String?
 
-model ConfigSite {
-  id         String  @id @default("config")
-  fotoSobre  String?
-  fotoCapa   String?
-  bio1       String?
-  bio2       String?
-  crn        String?
-  especialidades String[]
-  telefone   String?
-  endereco   String?
-  instagram  String?
-  whatsapp   String?
-}
+  peso          Float?
+  pressaoSist   Int?
+  pressaoDiast  Int?
+  glicemia      Float?
+  temperatura   Float?
+  circAbdominal Float?
+  circBraco     Float?
+  circQuadril   Float?
 
-model Servico {
-  id        String  @id @default(cuid())
-  titulo    String
-  descricao String
-  icone     String?
-  imagemUrl String?
-  ordem     Int     @default(0)
-  ativo     Boolean @default(true)
-}
+  avaliacaoNutricionalId String?
+  criadoEm               DateTime @default(now())
 
-model Plano {
-  id        String   @id @default(cuid())
-  nome      String
-  preco     String
-  periodo   String
-  destaque  Boolean  @default(false)
-  itens     String[]
-  ordem     Int      @default(0)
-  ativo     Boolean  @default(true)
+  clienteId String
+  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId, data])
 }
 
 model Avaliacao {
@@ -215,127 +315,120 @@ model PerfilFoto {
   userId String @unique
 }
 
-model RegistroHabito {
-  id                String   @id @default(cuid())
-  data              String   // YYYY-MM-DD
-  aderenciaDieta    Int      @default(0) // 0-10
-  variedadeAlimentar Int     @default(0) // 0-10
-  aceitacaoNovos    Int      @default(0) // 0-10
-  hidratacao        Int      @default(0) // 0-10
-  comportamentoMesa Int      @default(0) // 0-10
+// ─────────────────────────────────────────────
+// CONTEÚDO DO TENANT
+// ─────────────────────────────────────────────
 
-  // Aceitação grupos alimentares diários: true=aceitou, false=não aceitou, null=não informou
-  acFrutas         Boolean?
-  acVerduras       Boolean?
-  acLegumes        Boolean?
-  acProteinas      Boolean?
-  acCereais        Boolean?
-  acAgua           Boolean?
+model Post {
+  id           String   @id @default(cuid())
+  titulo       String
+  slug         String
+  resumo       String
+  conteudo     String
+  imagemUrl    String?
+  publicado    Boolean  @default(false)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
-  // Hábitos inadequados diários: true=cometeu, false=não cometeu, null=não informou
-  refrigerante     Boolean?
-  doces            Boolean?
-  fastFood         Boolean?
-  ultraprocessados Boolean?
-  beliscos         Boolean?
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  observacao        String?
-  criadoEm          DateTime @default(now())
-
-  clienteId String
-  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  @@unique([clienteId, data])
-}
-
-enum TipoEntradaDiario {
-  NOTA
-  MEDIDA
-  AVALIACAO_NUTRICIONAL
-  CONSULTA
-}
-
-enum TipoPergunta {
-  TEXTO
-  CHECKBOX
+  // Slug único por tenant (não globalmente)
+  @@unique([tenantId, slug])
+  @@index([tenantId, publicado])
 }
 
 model Formulario {
   id        String   @id @default(cuid())
   titulo    String
-  perguntas Json     // [{pergunta, tipo, opcoes?}]
+  perguntas Json
   criadoEm  DateTime @default(now())
 
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clienteId String
   cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   respostas RespostaFormulario[]
 
-  @@index([clienteId])
+  @@index([tenantId, clienteId])
 }
 
 model RespostaFormulario {
   id           String   @id @default(cuid())
-  respostas    Json     // [{pergunta, resposta}]
+  respostas    Json
   respondidoEm DateTime @default(now())
 
   formularioId String
   formulario   Formulario @relation(fields: [formularioId], references: [id], onDelete: Cascade)
 }
 
-model EntradaDiario {
-  id        String   @id @default(cuid())
-  data      String   // YYYY-MM-DD
-  tipo      TipoEntradaDiario
-  titulo    String?
-  texto     String?
+model Agendamento {
+  id        String            @id @default(cuid())
+  tipo      String
+  data      String
+  horario   String
+  nome      String
+  email     String
+  telefone  String
+  mensagem  String?
+  status    StatusAgendamento @default(PENDENTE)
+  criadoEm  DateTime          @default(now())
 
-  // Medidas clínicas (opcionais)
-  peso          Float?
-  pressaoSist   Int?    // sistólica
-  pressaoDiast  Int?    // diastólica
-  glicemia      Float?
-  temperatura   Float?
-  circAbdominal Float?
-  circBraco     Float?
-  circQuadril   Float?
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Link opcional para avaliação nutricional
-  avaliacaoNutricionalId String?
-
-  criadoEm  DateTime @default(now())
-
-  clienteId String
-  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  @@index([clienteId, data])
+  @@index([tenantId, data])
 }
 
-model AvaliacaoNutricional {
-  id        String   @id @default(cuid())
-  data      String   // YYYY-MM-DD
-  tipo      String   // INICIAL ou ACOMPANHAMENTO
+// ─────────────────────────────────────────────
+// CONFIGURAÇÕES DA LANDING PAGE (1:1 com Tenant)
+// ─────────────────────────────────────────────
 
-  // Aceitação de grupos alimentares (0-10)
-  frutas        Int @default(0)
-  verduras      Int @default(0)
-  legumes       Int @default(0)
-  proteinas     Int @default(0)
-  cereais       Int @default(0)
-  agua          Int @default(0)
+model ConfigSite {
+  // PK = tenantId (relação 1:1)
+  tenantId       String   @id
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Hábitos inadequados - frequência semanal (0-7)
-  refrigerantes    Int @default(0)
-  doces            Int @default(0)
-  fastFood         Int @default(0)
-  ultraprocessados Int @default(0)
-  beliscos         Int @default(0)
+  fotoSobre      String?
+  fotoCapa       String?
+  bio1           String?
+  bio2           String?
+  crn            String?
+  especialidades String[]
+  telefone       String?
+  endereco       String?
+  instagram      String?
+  whatsapp       String?
+}
 
-  observacao String?
-  criadoEm   DateTime @default(now())
+model Servico {
+  id        String  @id @default(cuid())
+  titulo    String
+  descricao String
+  icone     String?
+  imagemUrl String?
+  ordem     Int     @default(0)
+  ativo     Boolean @default(true)
 
-  clienteId String
-  cliente   Usuario @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([clienteId, data])
+  @@index([tenantId])
+}
+
+model Plano {
+  id       String   @id @default(cuid())
+  nome     String
+  preco    String
+  periodo  String
+  destaque Boolean  @default(false)
+  itens    String[]
+  ordem    Int      @default(0)
+  ativo    Boolean  @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }

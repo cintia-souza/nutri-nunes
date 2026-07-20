@@ -95,7 +95,7 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div className="relative">
             <div className="absolute -top-4 -left-4 w-full h-full bg-mint-200/40 blob rounded-3xl" aria-hidden="true" />
-            <img src={fotoSobre} alt="Nutricionista Adriana Rodrigues" className="relative rounded-3xl object-cover w-full h-[500px] shadow-lg" />
+            <img src={fotoSobre} alt="Nutricionista" className="relative rounded-3xl object-cover w-full h-[500px] shadow-lg" />
             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-lg p-5 animate-fade-slide-in">
               <p className="text-mint-700 font-bold text-lg">{crn}</p>
               <p className="text-stone-500 text-sm">Nutricionista Pediátrica</p>
@@ -266,7 +266,7 @@ export default async function HomePage() {
 
             {/* Brand */}
             <div className="md:col-span-5">
-              <img src="/logo.png" alt="Adriana Nutrição" className="h-12 w-auto object-contain mb-5" style={{filter:'brightness(0) invert(1)', maxWidth:'200px'}} />
+              <img src="/logo.png" alt="NutriHub" className="h-12 w-auto object-contain mb-5" style={{filter:'brightness(0) invert(1)', maxWidth:'200px'}} />
               <p className="text-stone-300 text-sm leading-relaxed max-w-xs mb-6">
                 Nutrição pediátrica com carinho e ciência. Ajudando famílias a criar uma relação saudável com a comida desde os primeiros meses de vida.
               </p>
@@ -326,7 +326,7 @@ export default async function HomePage() {
 
           {/* Bottom bar */}
           <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-stone-500 text-xs">© {new Date().getFullYear()} Adriana Rodrigues — Nutrição Pediátrica. Todos os direitos reservados.</p>
+            <p className="text-stone-500 text-xs">© {new Date().getFullYear()} NutriHub. Todos os direitos reservados.</p>
             <p className="text-stone-600 text-xs">{crn}</p>
           </div>
         </div>

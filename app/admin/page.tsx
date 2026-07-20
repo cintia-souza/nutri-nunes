@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { hojeLocal } from '@/lib/datas';
 
 interface ClienteResumo {
   id: string;
@@ -11,12 +12,31 @@ interface ClienteResumo {
   telefone?: string;
 }
 
+interface AgendamentoResumo {
+  id: string;
+  nome: string;
+  horario: string;
+  tipo: string;
+  status: string;
+}
+
 export default function AdminDashboard() {
   const [clientes, setClientes] = useState<ClienteResumo[]>([]);
   const [busca, setBusca] = useState('');
+  const [agendaHoje, setAgendaHoje] = useState<AgendamentoResumo[]>([]);
 
   useEffect(() => {
     fetch('/api/admin/clientes').then(r => r.json()).then(setClientes);
+    fetch('/api/agendamento')
+      .then(r => r.ok ? r.json() : [])
+      .then((todos: (AgendamentoResumo & { data: string })[]) => {
+        const hoje = hojeLocal();
+        setAgendaHoje(
+          todos
+            .filter(a => a.data === hoje && (a.status === 'CONFIRMADO' || a.status === 'PENDENTE'))
+            .sort((a, b) => a.horario.localeCompare(b.horario))
+        );
+      });
   }, []);
 
   const filtrados = clientes.filter(c =>
@@ -36,7 +56,7 @@ export default function AdminDashboard() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain" style={{filter:'brightness(0) invert(1)', maxWidth:'180px'}} />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Olá, Adriana! 👋</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Olá! 👋</h1>
             <p className="text-white/70 mt-1 text-sm">Cada paciente é um novo começo. O que vamos fazer hoje?</p>
           </div>
           <Link
@@ -51,6 +71,34 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Agenda do dia */}
+      {agendaHoje.length > 0 && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-amber-200 shadow-sm mb-8 overflow-hidden">
+          <div className="px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+            <h2 className="font-semibold text-warm-800 flex items-center gap-2">
+              <span>📅</span> Agenda de Hoje
+            </h2>
+            <Link href="/admin/agendamentos" className="text-xs font-medium text-amber-700 hover:underline">Ver tudo →</Link>
+          </div>
+          <div className="divide-y divide-cream-100">
+            {agendaHoje.map(ag => (
+              <div key={ag.id} className="px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-warm-700 w-12 shrink-0">{ag.horario}</span>
+                  <span className="text-sm text-warm-800">{ag.nome}</span>
+                  <span className="text-xs text-warm-400 hidden md:inline">{ag.tipo}</span>
+                </div>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${
+                  ag.status === 'CONFIRMADO' ? 'bg-sage-50 text-sage-700' : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {ag.status === 'CONFIRMADO' ? '✅ Confirmado' : '⏳ Pendente'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Ações rápidas */}
       <div className="grid md:grid-cols-3 gap-4 mb-8">

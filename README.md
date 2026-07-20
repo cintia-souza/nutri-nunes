@@ -1,6 +1,6 @@
-# Nutri Nunes — Sistema de Nutrição
+# NutriHub — Plataforma SaaS de Nutrição
 
-Plataforma web completa para consultório de nutrição, com portal do paciente e painel administrativo para a nutricionista.
+Plataforma SaaS multi-tenant para nutricionistas, com portal do paciente e painel administrativo.
 
 ## Stack
 
@@ -21,7 +21,7 @@ Plataforma web completa para consultório de nutrição, com portal do paciente 
 ## Estrutura do Projeto
 
 ```
-nutri-nunes/
+nutri-hub/
 ├── app/
 │   ├── admin/          # Painel da nutricionista
 │   ├── api/            # API Routes (Next.js)
@@ -67,6 +67,7 @@ Copie `.env.example` para `.env` e preencha:
 ```env
 DATABASE_URL="postgresql://..."     # Connection string do Neon
 JWT_SECRET="string-aleatoria-longa" # Mínimo 32 caracteres
+TENANT_SLUG_DEV="adriana"           # Slug do tenant para desenvolvimento local
 RESEND_API_KEY="re_..."             # Opcional — emails
 FROM_EMAIL="noreply@seudominio.com" # Opcional
 ```
@@ -97,7 +98,7 @@ Acesse [http://localhost:3000](http://localhost:3000)
 - **Token de acesso:** cookie `httpOnly`, `sameSite=lax`, expira em 1 dia
 - **Refresh token:** cookie `httpOnly`, `sameSite=lax`, expira em 30 dias
 - **Proteção de rotas:** `middleware.ts` intercepta todas as rotas `/admin/*`, `/cliente/*`, `/api/admin/*`, `/api/cliente/*`
-- **Roles:** `ADMIN` (nutricionista) e `CLIENTE` (paciente)
+- **Roles:** `SUPERADMIN` (dono da plataforma), `ADMIN` (nutricionista) e `CLIENTE` (paciente)
 
 ---
 
@@ -105,6 +106,7 @@ Acesse [http://localhost:3000](http://localhost:3000)
 
 | Model | Descrição |
 |---|---|
+| `Tenant` | Nutricionista assinante da plataforma |
 | `Usuario` | Pacientes e admin |
 | `Dieta` | Plano alimentar do paciente |
 | `Refeicao` | Refeições da dieta |

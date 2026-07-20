@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 import { Role } from '@/types';
 
 if (!process.env.JWT_SECRET) {
@@ -8,10 +9,19 @@ if (!process.env.JWT_SECRET) {
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
+// ─────────────────────────────────────────────
+// TIPOS
+// ─────────────────────────────────────────────
+
 export interface SessionPayload {
   userId: string;
   role: Role;
+  tenantId: string; // sempre presente — ADMIN e CLIENTE pertencem a um tenant
 }
+
+// ─────────────────────────────────────────────
+// JWT
+// ─────────────────────────────────────────────
 
 export async function createToken(payload: SessionPayload, expiresIn = '1d'): Promise<string> {
   return new SignJWT(payload as unknown as Record<string, unknown>)
@@ -39,4 +49,53 @@ export async function getSession(): Promise<SessionPayload | null> {
   const token = cookieStore.get('token')?.value;
   if (!token) return null;
   return verifyToken(token);
+}
+
+// ─────────────────────────────────────────────
+// RESOLUÇÃO DO TENANT
+//
+// Estratégia dupla:
+//   1. Usuário autenticado → tenantId vem direto do JWT (zero queries extras)
+//   2. Rotas públicas (landing, agendamento, blog) → slug extraído do Host header
+//
+// Exemplos de Host:
+//   maria.nutrinunes.com  → slug = "maria"
+//   localhost:3000        → slug = env TENANT_SLUG_DEV (fallback dev)
+// ─────────────────────────────────────────────
+
+export async function getTenantFromHost(): Promise<string | null> {
+  const headerStore = await headers();
+  const host = headerStore.get('host') ?? '';
+
+  // Em desenvolvimento, usa variável de ambiente para simular um tenant
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+    const devSlug = process.env.TENANT_SLUG_DEV;
+    if (!devSlug) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tenant = await (prisma as any).tenant.findUnique({
+      where: { slug: devSlug },
+      select: { id: true, ativo: true },
+    });
+    return tenant?.ativo ? tenant.id : null;
+  }
+
+  // Produção: extrai subdomínio (maria.nutrinunes.com → "maria")
+  const parts = host.split('.');
+  if (parts.length < 3) return null; // domínio raiz sem subdomínio
+  const slug = parts[0];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tenant = await (prisma as any).tenant.findUnique({
+    where: { slug },
+    select: { id: true, ativo: true },
+  });
+
+  return tenant?.ativo ? tenant.id : null;
+}
+
+// Helper unificado: prefere o JWT (autenticado), cai no Host (público)
+export async function resolveTenantId(): Promise<string | null> {
+  const session = await getSession();
+  if (session?.tenantId) return session.tenantId;
+  return getTenantFromHost();
 }

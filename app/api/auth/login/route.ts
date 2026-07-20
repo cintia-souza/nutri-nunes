@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createToken, createRefreshToken } from '@/lib/auth';
+import { createToken, createRefreshToken, resolveTenantId } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
     }
 
-    const usuario = await prisma.usuario.findUnique({ where: { email: emailNorm } });
+    // findUnique não funciona mais (email não é globalmente único)
+    // Precisa do tenantId para resolver o usuário correto
+    const tenantId = await resolveTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 404 });
+    }
+
+    const usuario = await prisma.usuario.findUnique({ where: { tenantId_email: { tenantId, email: emailNorm } } });
     // Sempre executa bcrypt para evitar timing attack
     const senhaValida = usuario ? await bcrypt.compare(senha, usuario.senhaHash) : await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
 
@@ -25,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
     }
 
-    const payload = { userId: usuario.id, role: usuario.role };
+    const payload = { userId: usuario.id, role: usuario.role, tenantId };
     const [token, refreshToken] = await Promise.all([
       createToken(payload),
       createRefreshToken(payload),

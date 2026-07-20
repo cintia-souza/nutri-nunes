@@ -4,8 +4,8 @@ import RegisterSW from '@/components/RegisterSW';
 import Header from '@/components/Header';
 
 export const metadata: Metadata = {
-  title: 'Adriana Rodrigues - Nutrição Inteligente',
-  description: 'Acompanhamento nutricional personalizado para transformar sua relação com a alimentação',
+  title: 'NutriHub — Plataforma de Nutrição',
+  description: 'Plataforma SaaS de acompanhamento nutricional personalizado para nutricionistas e pacientes',
   manifest: '/manifest.json',
   icons: {
     icon: [

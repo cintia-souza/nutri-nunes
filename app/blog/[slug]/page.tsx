@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getTenantFromHost } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,12 +11,15 @@ interface Props {
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
-  const post = await prisma.post.findUnique({ where: { slug } });
+
+  const tenantId = await getTenantFromHost();
+  if (!tenantId) notFound();
+
+  const post = await prisma.post.findUnique({ where: { tenantId_slug: { tenantId, slug } } });
   if (!post || !post.publicado) notFound();
 
-  // Posts relacionados
   const relacionados = await prisma.post.findMany({
-    where: { publicado: true, id: { not: post.id } },
+    where: { tenantId, publicado: true, id: { not: post.id } },
     take: 3,
     orderBy: { criadoEm: 'desc' },
     select: { titulo: true, slug: true, resumo: true, imagemUrl: true },
@@ -46,9 +50,9 @@ export default async function PostPage({ params }: Props) {
 
           {/* Meta */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sage-400 to-sage-600 flex items-center justify-center text-white text-xs font-bold">AR</div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sage-400 to-sage-600 flex items-center justify-center text-white text-xs font-bold">NH</div>
             <div>
-              <p className="text-sm font-medium text-warm-800">Adriana Rodrigues</p>
+              <p className="text-sm font-medium text-warm-800">NutriHub</p>
               <p className="text-xs text-warm-400">
                 {new Date(post.criadoEm).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
@@ -93,10 +97,10 @@ export default async function PostPage({ params }: Props) {
           {/* Rodapé do artigo */}
           <div className="mt-12 pt-8 border-t border-cream-200">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sage-400 to-sage-600 flex items-center justify-center text-white font-bold shadow-sm">AR</div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sage-400 to-sage-600 flex items-center justify-center text-white font-bold shadow-sm">NH</div>
               <div>
-                <p className="font-semibold text-warm-800">Dra. Adriana Rodrigues</p>
-                <p className="text-sm text-warm-500">Nutricionista Clínica e Esportiva • CRN-3</p>
+                <p className="font-semibold text-warm-800">NutriHub</p>
+                <p className="text-sm text-warm-500">Plataforma de Nutrição</p>
               </div>
             </div>
           </div>
