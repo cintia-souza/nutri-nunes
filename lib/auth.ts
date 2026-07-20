@@ -2,7 +2,11 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { Role } from '@/types';
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-me');
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET não definido nas variáveis de ambiente');
+}
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface SessionPayload {
   userId: string;

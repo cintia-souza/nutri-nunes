@@ -4,34 +4,47 @@ import { createToken, createRefreshToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
-  const { email, senha } = await req.json();
+  try {
+    const body = await req.json();
+    const { email, senha } = body;
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
-  if (!usuario || !(await bcrypt.compare(senha, usuario.senhaHash))) {
-    return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+    if (!email || !senha || typeof email !== 'string' || typeof senha !== 'string') {
+      return NextResponse.json({ error: 'Email e senha são obrigatórios' }, { status: 400 });
+    }
+
+    const emailNorm = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
+    }
+
+    const usuario = await prisma.usuario.findUnique({ where: { email: emailNorm } });
+    // Sempre executa bcrypt para evitar timing attack
+    const senhaValida = usuario ? await bcrypt.compare(senha, usuario.senhaHash) : await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
+
+    if (!usuario || !senhaValida) {
+      return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+    }
+
+    const payload = { userId: usuario.id, role: usuario.role };
+    const [token, refreshToken] = await Promise.all([
+      createToken(payload),
+      createRefreshToken(payload),
+    ]);
+
+    const response = NextResponse.json({ role: usuario.role });
+
+    const cookieBase = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+    };
+
+    response.cookies.set('token', token, { ...cookieBase, maxAge: 60 * 60 * 24 });
+    response.cookies.set('refreshToken', refreshToken, { ...cookieBase, maxAge: 60 * 60 * 24 * 30 });
+
+    return response;
+  } catch {
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
-
-  const payload = { userId: usuario.id, role: usuario.role };
-  const token = await createToken(payload);
-  const refreshToken = await createRefreshToken(payload);
-
-  const response = NextResponse.json({ role: usuario.role });
-
-  response.cookies.set('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 1 dia
-    path: '/',
-  });
-
-  response.cookies.set('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30 dias
-    path: '/',
-  });
-
-  return response;
 }
