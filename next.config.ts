@@ -21,9 +21,22 @@ const securityHeaders = [
   },
 ];
 
+const TENANT_PATHS = ['/admin', '/cliente', '/login', '/api/admin', '/api/cliente', '/api/auth'];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  async rewrites() {
+    return [
+      // Landing page do tenant: /adriana → /
+      { source: '/:slug', destination: '/' },
+      // Sub-rotas do tenant: /adriana/admin/... → /admin/...
+      ...TENANT_PATHS.flatMap((p) => [
+        { source: `/:slug${p}`, destination: p },
+        { source: `/:slug${p}/:path*`, destination: `${p}/:path*` },
+      ]),
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },

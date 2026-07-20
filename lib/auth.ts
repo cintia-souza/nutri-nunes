@@ -65,24 +65,9 @@ export async function getSession(): Promise<SessionPayload | null> {
 
 export async function getTenantFromHost(): Promise<string | null> {
   const headerStore = await headers();
-  const host = headerStore.get('host') ?? '';
-
-  // Em desenvolvimento, usa variável de ambiente para simular um tenant
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
-    const devSlug = process.env.TENANT_SLUG_DEV;
-    if (!devSlug) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tenant = await (prisma as any).tenant.findUnique({
-      where: { slug: devSlug },
-      select: { id: true, ativo: true },
-    });
-    return tenant?.ativo ? tenant.id : null;
-  }
-
-  // Produção: extrai subdomínio (maria.nutrinunes.com → "maria")
-  const parts = host.split('.');
-  if (parts.length < 3) return null; // domínio raiz sem subdomínio
-  const slug = parts[0];
+  // Middleware injeta x-tenant-slug (path-based: /adriana/admin → slug = adriana)
+  const slug = headerStore.get('x-tenant-slug') ?? '';
+  if (!slug) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant = await (prisma as any).tenant.findUnique({

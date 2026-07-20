@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { createToken, createRefreshToken, resolveTenantId } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export async function loginAction(formData: FormData) {
@@ -52,6 +52,14 @@ export async function loginAction(formData: FormData) {
   cookieStore.set('token', token, { ...cookieBase, maxAge: 60 * 60 * 24 });
   cookieStore.set('refreshToken', refreshToken, { ...cookieBase, maxAge: 60 * 60 * 24 * 30 });
 
-  const dest = usuario.role === 'SUPERADMIN' ? '/super-admin' : usuario.role === 'ADMIN' ? '/admin' : '/cliente';
+  const headerStore = await headers();
+  const slug = headerStore.get('x-tenant-slug') ?? '';
+  const prefix = slug ? `/${slug}` : '';
+
+  const dest =
+    usuario.role === 'SUPERADMIN' ? '/super-admin' :
+    usuario.role === 'ADMIN' ? `${prefix}/admin` :
+    `${prefix}/cliente`;
+
   redirect(dest);
 }

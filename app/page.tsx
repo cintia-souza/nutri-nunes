@@ -11,23 +11,8 @@ interface SiteConfig {
 
 async function resolveTenantId(): Promise<string | null> {
   const headerStore = await headers();
-  const host = headerStore.get('host') ?? '';
-
-  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
-    const devSlug = process.env.TENANT_SLUG_DEV;
-    if (!devSlug) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tenant = await (prisma as any).tenant.findUnique({ where: { slug: devSlug }, select: { id: true } });
-    return tenant?.id ?? null;
-  }
-
-  // Produção: extrai subdomínio (adriana.nutrihub.com → "adriana")
-  // Suporta tanto domínios customizados quanto *.vercel.app
-  const parts = host.split('.');
-  if (parts.length < 2) return null;
-  const slug = parts[0];
-  if (slug === 'www') return null;
-
+  const slug = headerStore.get('x-tenant-slug') ?? '';
+  if (!slug) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant = await (prisma as any).tenant.findUnique({ where: { slug }, select: { id: true } });
   return tenant?.id ?? null;
