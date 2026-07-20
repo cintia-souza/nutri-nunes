@@ -1,36 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { loginAction } from './actions';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro('');
     setLoading(true);
-
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha }),
-    });
-
+    const result = await loginAction(new FormData(e.currentTarget));
     setLoading(false);
-
-    if (res.ok) {
-      const { role } = await res.json();
-      if (role === 'SUPERADMIN') router.push('/super-admin');
-      else if (role === 'ADMIN') router.push('/admin');
-      else router.push('/cliente');
-    } else {
-      setErro('Email ou senha inválidos');
-    }
+    if (result?.error) setErro(result.error);
   }
 
   return (
@@ -57,9 +40,8 @@ export default function LoginPage() {
           <label htmlFor="login-email" className="block text-sm font-medium text-warm-600 mb-1.5">Email</label>
           <input
             id="login-email"
+            name="email"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             className="w-full border border-cream-300 rounded-xl px-4 py-3 text-warm-800 bg-cream-50 placeholder-warm-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-sage-400 focus-visible:border-sage-400"
             placeholder="seu@email.com"
             required
@@ -71,9 +53,8 @@ export default function LoginPage() {
           <label htmlFor="login-senha" className="block text-sm font-medium text-warm-600 mb-1.5">Senha</label>
           <input
             id="login-senha"
+            name="senha"
             type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
             className="w-full border border-cream-300 rounded-xl px-4 py-3 text-warm-800 bg-cream-50 placeholder-warm-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-sage-400 focus-visible:border-sage-400"
             placeholder="••••••••"
             required

@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
       createRefreshToken(payload),
     ]);
 
-    const response = NextResponse.json({ role: usuario.role });
+    const dest = usuario.role === 'SUPERADMIN' ? '/super-admin' : usuario.role === 'ADMIN' ? '/admin' : '/cliente';
+    const response = NextResponse.json({ role: usuario.role, redirect: dest });
 
     const cookieBase = {
       httpOnly: true,
