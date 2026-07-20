@@ -69,7 +69,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  // Cookie leve (não httpOnly) para Server Actions lerem via cookies()
+  if (slug) res.cookies.set('tenant-slug', slug, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
+  return res;
 }
 
 export const config = {

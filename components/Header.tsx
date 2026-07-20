@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
-import { User, CalendarDays, BookOpen, TrendingUp, Star, UserCircle, BarChart3, Info, Briefcase, CreditCard, PenSquare, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
+import { User, Info, Briefcase, CreditCard, PenSquare, Menu, X, type LucideIcon } from 'lucide-react';
 
 interface NavItem { href: string; label: string; icon: LucideIcon; }
 
@@ -15,62 +15,21 @@ const NAV_PUBLIC: NavItem[] = [
   { href: '/blog', label: 'Blog', icon: PenSquare },
 ];
 
-const NAV_CLIENTE: NavItem[] = [
-  { href: '/cliente', label: 'Início', icon: Info },
-  { href: '/cliente/dieta', label: 'Minha Dieta', icon: BookOpen },
-  { href: '/cliente/habitos', label: 'Hábitos', icon: BarChart3 },
-  { href: '/cliente/agendamento', label: 'Agendar', icon: CalendarDays },
-  { href: '/cliente/progresso', label: 'Progresso', icon: TrendingUp },
-  { href: '/cliente/avaliacao', label: 'Avaliar', icon: Star },
-  { href: '/cliente/perfil', label: 'Perfil', icon: UserCircle },
-];
-
-function NavLinks({ links, pathname }: { links: NavItem[]; pathname: string }) {
-  function isActive(href: string) {
-    if (href === '/cliente') return pathname === href;
-    return pathname.startsWith(href) && href !== '/cliente';
-  }
-
-  return (
-    <>
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl transition-all duration-200 ${
-            isActive(link.href)
-              ? 'text-sage-700 bg-sage-50 font-medium'
-              : 'text-warm-600 hover:text-sage-700 hover:bg-sage-50'
-          }`}
-        >
-          <link.icon className="w-4 h-4" />
-          {link.label}
-        </Link>
-      ))}
-    </>
-  );
-}
-
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ready, setReady] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => { setReady(true); }, []);
 
-  const isAdmin = pathname.startsWith('/admin');
-  const isSuperAdmin = pathname.startsWith('/super-admin');
-  const isCliente = pathname.startsWith('/cliente');
-  const isAuth = isAdmin || isCliente;
-  const navLinks = isCliente ? NAV_CLIENTE : NAV_PUBLIC;
-
-  if (isAdmin || isSuperAdmin) return null;
-
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  }
+  // Não renderiza em áreas autenticadas — cada uma tem seu próprio layout/sidebar
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/cliente') ||
+    pathname.startsWith('/super-admin') ||
+    pathname.includes('/admin') ||
+    pathname.includes('/cliente')
+  ) return null;
 
   return (
     <header className="glass border-b border-cream-200/60 sticky top-0 z-50" style={{boxShadow:'0 1px 0 rgba(34,160,107,0.08), 0 2px 12px rgba(0,0,0,0.04)'}}>
@@ -84,24 +43,24 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-1" suppressHydrationWarning>
           {ready && (
             <>
-              <NavLinks links={navLinks} pathname={pathname} />
-              <ThemeToggle />
-              {isAuth ? (
-                <button
-                  onClick={handleLogout}
-                  className="ml-3 flex items-center gap-1.5 text-sm text-warm-500 hover:text-danger font-medium px-4 py-2 rounded-xl hover:bg-red-50/80 transition-all duration-200 min-h-[44px]"
-                >
-                  <LogOut className="w-4 h-4" /> Sair
-                </button>
-              ) : (
+              {NAV_PUBLIC.map((link) => (
                 <Link
-                  href="/login"
-                  className="ml-3 flex items-center gap-1.5 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px]"
-                  style={{backgroundColor:'#ff7a55'}}
+                  key={link.href}
+                  href={link.href}
+                  className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl transition-all duration-200 text-warm-600 hover:text-sage-700 hover:bg-sage-50"
                 >
-                  <User className="w-4 h-4" /> Portal do Paciente
+                  <link.icon className="w-4 h-4" />
+                  {link.label}
                 </Link>
-              )}
+              ))}
+              <ThemeToggle />
+              <Link
+                href="/login"
+                className="ml-3 flex items-center gap-1.5 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 min-h-[44px]"
+                style={{backgroundColor:'#ff7a55'}}
+              >
+                <User className="w-4 h-4" /> Portal do Paciente
+              </Link>
             </>
           )}
         </div>
@@ -121,7 +80,7 @@ export default function Header() {
       {menuOpen && ready && (
         <div className="md:hidden glass border-t border-cream-200/60 animate-fade-slide-in">
           <div className="px-6 py-4 space-y-1">
-            {navLinks.map((link) => (
+            {NAV_PUBLIC.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -132,15 +91,9 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            {isAuth ? (
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 text-danger px-4 py-3 rounded-xl hover:bg-red-50 mt-2">
-                <LogOut className="w-5 h-5" /> Sair
-              </button>
-            ) : (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="flex items-center justify-center gap-2 text-white text-center px-4 py-3 rounded-xl font-medium mt-2" style={{backgroundColor:'#ff7a55'}}>
-                <User className="w-5 h-5" /> Portal do Paciente
-              </Link>
-            )}
+            <Link href="/login" onClick={() => setMenuOpen(false)} className="flex items-center justify-center gap-2 text-white text-center px-4 py-3 rounded-xl font-medium mt-2" style={{backgroundColor:'#ff7a55'}}>
+              <User className="w-5 h-5" /> Portal do Paciente
+            </Link>
             <div className="flex items-center gap-2 px-4 pt-3 border-t border-cream-200 mt-2">
               <span className="text-xs text-warm-400">Tema:</span>
               <ThemeToggle />

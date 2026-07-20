@@ -28,8 +28,8 @@ const nextConfig: NextConfig = {
   compress: true,
   async rewrites() {
     return [
-      // Landing page do tenant: /adriana → /
-      { source: '/:slug', destination: '/' },
+      // Landing page do tenant: /adriana → /p/adriana (rota dinâmica com validação)
+      { source: '/:slug', destination: '/p/:slug' },
       // Sub-rotas do tenant: /adriana/admin/... → /admin/...
       ...TENANT_PATHS.flatMap((p) => [
         { source: `/:slug${p}`, destination: p },
