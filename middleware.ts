@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   } else {
     slug = hostname.split('.')[0];
 
-    if (slug === 'localhost' || slug === 'www' || hostname.includes('vercel.dev')) {
+    if (slug === 'localhost' || slug === 'www' || hostname.includes('vercel.dev') || hostname.includes('vercel.app')) {
       slug = '';
     }
   }

@@ -1,11 +1,36 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
 interface SiteConfig {
   fotoSobre?: string; fotoCapa?: string; bio1?: string; bio2?: string;
   crn?: string; especialidades?: string[]; telefone?: string; endereco?: string; whatsapp?: string;
+}
+
+async function resolveTenantId(): Promise<string | null> {
+  const headerStore = await headers();
+  const host = headerStore.get('host') ?? '';
+
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+    const devSlug = process.env.TENANT_SLUG_DEV;
+    if (!devSlug) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tenant = await (prisma as any).tenant.findUnique({ where: { slug: devSlug }, select: { id: true } });
+    return tenant?.id ?? null;
+  }
+
+  // Produção: extrai subdomínio (adriana.nutrihub.com → "adriana")
+  // Suporta tanto domínios customizados quanto *.vercel.app
+  const parts = host.split('.');
+  if (parts.length < 2) return null;
+  const slug = parts[0];
+  if (slug === 'www') return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tenant = await (prisma as any).tenant.findUnique({ where: { slug }, select: { id: true } });
+  return tenant?.id ?? null;
 }
 
 const SERVICOS = [
@@ -30,12 +55,15 @@ export default async function HomePage() {
   let avaliacoes: { nota: number; texto: string; cliente: { nome: string } }[] = [];
 
   try {
+    const tenantId = await resolveTenantId();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const p = prisma as any;
-    config = (await p.configSite.findUnique({ where: { id: 'config' } })) || {};
-    servicosDB = await p.servico.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
-    planosDB = await p.plano.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
-    avaliacoes = await p.avaliacao.findMany({ where: { aprovada: true }, orderBy: { criadoEm: 'desc' }, take: 6, include: { cliente: { select: { nome: true } } } }).catch(() => []);
+    if (tenantId) {
+      config = (await p.configSite.findUnique({ where: { tenantId } })) || {};
+      servicosDB = await p.servico.findMany({ where: { tenantId, ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
+      planosDB = await p.plano.findMany({ where: { tenantId, ativo: true }, orderBy: { ordem: 'asc' } }).catch(() => []);
+      avaliacoes = await p.avaliacao.findMany({ where: { aprovada: true, cliente: { tenantId } }, orderBy: { criadoEm: 'desc' }, take: 6, include: { cliente: { select: { nome: true } } } }).catch(() => []);
+    }
   } catch { /* banco offline */ }
 
   const servicosFinal = servicosDB.length > 0 ? servicosDB.map(s => ({ titulo: s.titulo, desc: s.descricao, icon: s.icone || '🥗', img: s.imagemUrl || '' })) : SERVICOS;
