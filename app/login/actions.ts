@@ -15,19 +15,23 @@ export async function loginAction(formData: FormData) {
 
   const slug = (formData.get('slug') as string) ?? '';
 
+  console.log('[login] email:', email, '| slug:', slug);
+
   let usuario;
   const superAdmin = await prisma.usuario.findFirst({ where: { email, role: 'SUPERADMIN' } });
+  console.log('[login] superAdmin encontrado:', !!superAdmin);
 
   if (superAdmin) {
     usuario = superAdmin;
   } else {
-    // Resolve tenantId pelo slug vindo do form (headers customizados não chegam em Server Actions)
     let tenantId: string | null = null;
     if (slug) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tenant = await (prisma as any).tenant.findUnique({ where: { slug }, select: { id: true, ativo: true } });
+      console.log('[login] tenant pelo slug:', tenant);
       tenantId = tenant?.ativo ? tenant.id : null;
     }
+    console.log('[login] tenantId resolvido:', tenantId);
     if (!tenantId) {
       await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
       return { error: 'Credenciais inválidas' };
@@ -35,7 +39,13 @@ export async function loginAction(formData: FormData) {
     usuario = await prisma.usuario.findUnique({
       where: { tenantId_email: { tenantId, email } },
     });
+    console.log('[login] usuario encontrado:', !!usuario, usuario?.role);
   }
+
+  const senhaValida = usuario
+    ? await bcrypt.compare(senha, usuario.senhaHash)
+    : await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
+  console.log('[login] senhaValida:', senhaValida);
 
   const senhaValida = usuario
     ? await bcrypt.compare(senha, usuario.senhaHash)
