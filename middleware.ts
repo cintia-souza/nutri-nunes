@@ -44,6 +44,16 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Proteger área e API super-admin
+  if (pathname.startsWith('/super-admin') || pathname.startsWith('/api/super-admin')) {
+    if (!session || session.role !== 'SUPERADMIN') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
+  }
+
   // Proteger APIs admin
   if (pathname.startsWith('/api/admin')) {
     if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) {
@@ -70,8 +80,10 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/super-admin/:path*',
     '/cliente/:path*',
     '/admin/:path*',
+    '/api/super-admin/:path*',
     '/api/admin/:path*',
     '/api/cliente/:path*'
   ],
