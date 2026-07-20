@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { loginAction } from './actions';
 
 export default function LoginPage() {
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+  const pathname = usePathname(); // ex: /adriana/login
+  const slug = pathname.split('/')[1] ?? '';
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,6 +30,7 @@ export default function LoginPage() {
           <h1 id="login-heading" className="text-2xl font-bold text-warm-800">Entrar</h1>
           <p className="text-sm text-warm-500 mt-1">Acesse seu portal de nutrição</p>
         </div>
+        <input type="hidden" name="slug" value={slug} />
 
         <div role="alert" aria-live="polite">
           {erro && (

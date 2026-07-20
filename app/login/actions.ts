@@ -1,9 +1,9 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { createToken, createRefreshToken, resolveTenantId } from '@/lib/auth';
+import { createToken, createRefreshToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export async function loginAction(formData: FormData) {
@@ -13,13 +13,21 @@ export async function loginAction(formData: FormData) {
   if (!email || !senha) return { error: 'Email e senha são obrigatórios' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Email inválido' };
 
+  const slug = (formData.get('slug') as string) ?? '';
+
   let usuario;
   const superAdmin = await prisma.usuario.findFirst({ where: { email, role: 'SUPERADMIN' } });
 
   if (superAdmin) {
     usuario = superAdmin;
   } else {
-    const tenantId = await resolveTenantId();
+    // Resolve tenantId pelo slug vindo do form (headers customizados não chegam em Server Actions)
+    let tenantId: string | null = null;
+    if (slug) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tenant = await (prisma as any).tenant.findUnique({ where: { slug }, select: { id: true, ativo: true } });
+      tenantId = tenant?.ativo ? tenant.id : null;
+    }
     if (!tenantId) {
       await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
       return { error: 'Credenciais inválidas' };
@@ -52,8 +60,6 @@ export async function loginAction(formData: FormData) {
   cookieStore.set('token', token, { ...cookieBase, maxAge: 60 * 60 * 24 });
   cookieStore.set('refreshToken', refreshToken, { ...cookieBase, maxAge: 60 * 60 * 24 * 30 });
 
-  const headerStore = await headers();
-  const slug = headerStore.get('x-tenant-slug') ?? '';
   const prefix = slug ? `/${slug}` : '';
 
   const dest =
