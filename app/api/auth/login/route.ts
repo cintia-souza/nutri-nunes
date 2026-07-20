@@ -17,22 +17,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
     }
 
-    // findUnique não funciona mais (email não é globalmente único)
-    // Precisa do tenantId para resolver o usuário correto
-    const tenantId = await resolveTenantId();
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 404 });
+    // SUPERADMIN: busca pelo email globalmente (não tem subdomínio)
+    // Tenant normal: busca pelo email dentro do tenant resolvido pelo host
+    let usuario;
+    const superAdmin = await prisma.usuario.findFirst({
+      where: { email: emailNorm, role: 'SUPERADMIN' },
+    });
+
+    if (superAdmin) {
+      usuario = superAdmin;
+    } else {
+      const tenantId = await resolveTenantId();
+      if (!tenantId) {
+        // Executa bcrypt mesmo sem tenant para evitar timing attack
+        await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
+        return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+      }
+      usuario = await prisma.usuario.findUnique({
+        where: { tenantId_email: { tenantId, email: emailNorm } },
+      });
     }
 
-    const usuario = await prisma.usuario.findUnique({ where: { tenantId_email: { tenantId, email: emailNorm } } });
     // Sempre executa bcrypt para evitar timing attack
-    const senhaValida = usuario ? await bcrypt.compare(senha, usuario.senhaHash) : await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
+    const senhaValida = usuario
+      ? await bcrypt.compare(senha, usuario.senhaHash)
+      : await bcrypt.compare(senha, '$2a$10$invalidhashtopreventtimingattack');
 
     if (!usuario || !senhaValida) {
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
     }
 
-    const payload = { userId: usuario.id, role: usuario.role, tenantId };
+    const payload = { userId: usuario.id, role: usuario.role, tenantId: usuario.tenantId };
     const [token, refreshToken] = await Promise.all([
       createToken(payload),
       createRefreshToken(payload),

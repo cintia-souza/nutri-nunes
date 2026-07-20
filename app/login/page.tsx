@@ -25,7 +25,9 @@ export default function LoginPage() {
 
     if (res.ok) {
       const { role } = await res.json();
-      router.push(role === 'ADMIN' ? '/admin' : '/cliente');
+      if (role === 'SUPERADMIN') router.push('/super-admin');
+      else if (role === 'ADMIN') router.push('/admin');
+      else router.push('/cliente');
     } else {
       setErro('Email ou senha inválidos');
     }
