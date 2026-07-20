@@ -80,6 +80,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/super-admin',
     '/super-admin/:path*',
     '/cliente/:path*',
     '/admin/:path*',

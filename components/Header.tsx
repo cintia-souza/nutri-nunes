@@ -60,11 +60,12 @@ export default function Header() {
   useEffect(() => { setReady(true); }, []);
 
   const isAdmin = pathname.startsWith('/admin');
+  const isSuperAdmin = pathname.startsWith('/super-admin');
   const isCliente = pathname.startsWith('/cliente');
   const isAuth = isAdmin || isCliente;
   const navLinks = isCliente ? NAV_CLIENTE : NAV_PUBLIC;
 
-  if (isAdmin) return null;
+  if (isAdmin || isSuperAdmin) return null;
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
