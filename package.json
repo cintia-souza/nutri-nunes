@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
+    "@react-pdf/renderer": "^4.9.0",
     "bcryptjs": "^2.4.3",
     "jose": "^5.0.0",
     "lucide-react": "^1.23.0",

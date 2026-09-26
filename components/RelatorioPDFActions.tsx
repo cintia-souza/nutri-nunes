@@ -15,7 +15,7 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
   const [erro, setErro] = useState('');
 
   function handlePrint() {
-    window.print();
+    window.open(`/api/admin/relatorio/pdf?clienteId=${clienteId}`, '_blank');
   }
 
   async function handleEmail() {
