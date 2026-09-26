@@ -13,18 +13,23 @@ export async function POST(req: NextRequest) {
   const { clienteId } = await req.json();
   if (!clienteId) return NextResponse.json({ error: 'clienteId obrigatório' }, { status: 400 });
 
-  const [cliente, progressos, checks, avaliacoes, habitos] = await Promise.all([
+  const [cliente, progressos, checks, avaliacoes, habitos, admin] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: clienteId },
-      select: { nome: true, email: true, pesoAtual: true, altura: true, objetivo: true, criadoEm: true },
+      select: { nome: true, email: true, pesoAtual: true, altura: true, objetivo: true, criadoEm: true, tenantId: true },
     }),
     prisma.registroProgresso.findMany({ where: { clienteId }, orderBy: { data: 'asc' } }),
     prisma.checkRefeicao.findMany({ where: { clienteId }, orderBy: { data: 'desc' }, take: 90 }),
     prisma.avaliacaoNutricional.findMany({ where: { clienteId }, orderBy: { data: 'asc' } }),
     prisma.registroHabito.findMany({ where: { clienteId }, orderBy: { data: 'desc' }, take: 30 }),
+    prisma.usuario.findFirst({ where: { id: session.userId }, select: { email: true } }),
   ]);
 
   if (!cliente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 });
+
+  // Sem domínio verificado no Resend, só é possível enviar para o próprio email cadastrado.
+  // Enviamos para a nutricionista (remetente = destinatário permitido).
+  const destinatario = admin?.email ?? cliente.email;
 
   const totalChecks = checks.length;
   const realizados = checks.filter(c => c.realizada).length;
@@ -72,8 +77,8 @@ export async function POST(req: NextRequest) {
   const html = gerarHtml(cliente.nome, mes, dadosAnalise, analise);
 
   const ok = await enviarEmail({
-    to: cliente.email,
-    subject: `Seu Relatório de Evolução — ${mes}`,
+    to: destinatario,
+    subject: `Relatório de ${cliente.nome} — ${mes}`,
     html,
   });
 
@@ -174,7 +179,7 @@ function gerarHtml(nomeCompleto: string, mes: string, d: DadosAnalise, a: Analis
   <!-- Header -->
   <div style="background:linear-gradient(135deg,#0f3d29,#1a8558);padding:32px 32px 28px;">
     <p style="color:rgba(255,255,255,0.55);font-size:11px;text-transform:uppercase;letter-spacing:3px;margin:0 0 8px;">Relatório de Evolução</p>
-    <h1 style="color:white;font-size:24px;margin:0 0 6px;font-weight:700;">Olá, ${nome}! ${a.emojiStatus}</h1>
+    <h1 style="color:white;font-size:24px;margin:0 0 6px;font-weight:700;">${nome} ${a.emojiStatus}</h1>
     <p style="color:rgba(255,255,255,0.7);font-size:14px;margin:0 0 16px;">${mes}</p>
     <!-- Status badge -->
     <div style="display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:99px;padding:6px 16px;">
@@ -220,19 +225,15 @@ function gerarHtml(nomeCompleto: string, mes: string, d: DadosAnalise, a: Analis
       <p style="margin:0;font-size:13px;color:#5c5650;line-height:1.7;">${esc(a.conclusao)}</p>
     </div>
 
-    <!-- CTA -->
-    <div style="text-align:center;margin-top:8px;">
-      <p style="color:#7d7670;font-size:13px;margin-bottom:16px;">Acesse o app para ver seus gráficos e registrar novos dados.</p>
-      <a href="${appUrl}/adriana/cliente"
-        style="display:inline-block;background:linear-gradient(135deg,#22a06b,#166947);color:white;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:14px;">
-        Acessar meu portal →
-      </a>
+    <!-- Nota para nutricionista -->
+    <div style="margin-top:8px;padding:12px 16px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#166947;">📎 Para enviar ao paciente, encaminhe este email ou imprima o relatório pelo painel.</p>
     </div>
   </div>
 
   <!-- Footer -->
   <div style="padding:16px 32px;background:#faf8f4;border-top:1px solid #ede9e2;text-align:center;">
-    <p style="color:#a8a099;font-size:12px;margin:0;">Relatório gerado automaticamente pela sua nutricionista via NutriHub</p>
+    <p style="color:#a8a099;font-size:12px;margin:0;">Gerado via NutriHub — enviado para sua caixa de entrada</p>
   </div>
 </div>
 </body>

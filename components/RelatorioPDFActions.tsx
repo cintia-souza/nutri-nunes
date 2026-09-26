@@ -56,7 +56,7 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
         disabled={enviando}
         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white min-h-[40px] shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)' }}
-        title={`Enviar para ${clienteEmail}`}
+        title="Envia o relatório para o seu email"
       >
         {enviando ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -65,7 +65,7 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
         ) : (
           <Mail className="w-4 h-4" />
         )}
-        {enviando ? 'Enviando...' : enviado ? 'Enviado!' : `Enviar para ${clienteNome.split(' ')[0]}`}
+        {enviando ? 'Enviando...' : enviado ? 'Enviado!' : 'Enviar por email'}
       </button>
 
       {erro && (
