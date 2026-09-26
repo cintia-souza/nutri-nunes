@@ -29,10 +29,17 @@ export default async function LandingPage({ params }: { params: Promise<{ slug: 
 
   // ── VALIDAÇÃO RIGOROSA ──────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenant = await (prisma as any).tenant.findUnique({
-    where: { slug },
-    select: { id: true, ativo: true },
-  });
+  let tenant: { id: string; ativo: boolean } | null = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tenant = await (prisma as any).tenant.findUnique({
+      where: { slug },
+      select: { id: true, ativo: true },
+    });
+  } catch {
+    // banco inacessível — trata como not found para não expor 500
+    notFound();
+  }
 
   if (!tenant || !tenant.ativo) notFound();
   // ───────────────────────────────────────────────────────────────────
