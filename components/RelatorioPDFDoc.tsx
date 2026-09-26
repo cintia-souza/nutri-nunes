@@ -4,6 +4,26 @@ import {
 } from '@react-pdf/renderer';
 import { type DadosAnalise, type Analise } from '@/lib/analise-relatorio';
 
+// ── Fonte com suporte completo a UTF-8 / caracteres latinos ──────────────────
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf', fontWeight: 400 },
+    { src: 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlvAw.ttf', fontWeight: 700 },
+  ],
+});
+
+// Sanitiza caracteres que a fonte não suporta
+function t(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/\u2014/g, '-')  // em dash —
+    .replace(/\u2013/g, '-')  // en dash –
+    .replace(/\u2019/g, "'") // ’
+    .replace(/\u201c/g, '"') // “
+    .replace(/\u201d/g, '"'); // ”
+}
+
 // ── Paleta ────────────────────────────────────────────────────────────────────
 const C = {
   verde:      '#1a8558',
@@ -27,7 +47,7 @@ const C = {
 // ── Estilos ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
+    fontFamily: 'Roboto',
     backgroundColor: C.branco,
     paddingBottom: 60,
   },
@@ -45,7 +65,8 @@ const s = StyleSheet.create({
   },
   headerNome: {
     fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
+    fontWeight: 700,
     color: C.branco,
     marginBottom: 4,
   },
@@ -64,7 +85,7 @@ const s = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     color: C.branco,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
   },
   // Métricas rápidas
   metricas: {
@@ -83,7 +104,7 @@ const s = StyleSheet.create({
   },
   metricaValor: {
     fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     marginBottom: 3,
   },
   metricaLabel: {
@@ -100,7 +121,7 @@ const s = StyleSheet.create({
   // Seções
   secaoTitulo: {
     fontSize: 11,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     color: C.cinza1,
     marginBottom: 8,
     marginTop: 20,
@@ -128,7 +149,7 @@ const s = StyleSheet.create({
   },
   cardTitulo: {
     fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     color: C.cinza1,
     marginBottom: 4,
   },
@@ -163,7 +184,7 @@ const s = StyleSheet.create({
   },
   tabelaDiff: {
     fontSize: 9.5,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     width: '12%',
     textAlign: 'right',
   },
@@ -183,7 +204,7 @@ const s = StyleSheet.create({
   passoSeta: {
     fontSize: 10,
     color: C.verde,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     marginTop: 1,
   },
   passoTexto: {
@@ -268,8 +289,8 @@ function CardInsight({ emoji, titulo, descricao, nivel }: {
   const bg  = nivel === 'positivo' ? C.verdeClaro : nivel === 'atencao' ? C.amareloClaro : C.cinza4;
   return (
     <View style={[s.card, { backgroundColor: bg, borderLeftColor: cor }]}>
-      <Text style={s.cardTitulo}>{emoji}  {titulo}</Text>
-      <Text style={s.cardTexto}>{descricao}</Text>
+      <Text style={s.cardTitulo}>{t(titulo)}</Text>
+      <Text style={s.cardTexto}>{t(descricao)}</Text>
     </View>
   );
 }
@@ -311,11 +332,11 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
 
         {/* ── HEADER ── */}
         <View style={s.header}>
-          <Text style={s.headerLabel}>Relatório de Evolução Nutricional</Text>
-          <Text style={s.headerNome}>{nome}</Text>
-          <Text style={s.headerSub}>{mes}  ·  {dados.diasAcompanhamento > 0 ? `${dados.diasAcompanhamento} dias de acompanhamento` : 'Início do acompanhamento'}</Text>
+          <Text style={s.headerLabel}>Relatorio de Evolucao Nutricional</Text>
+          <Text style={s.headerNome}>{t(nome)}</Text>
+          <Text style={s.headerSub}>{t(mes)}  -  {dados.diasAcompanhamento > 0 ? `${dados.diasAcompanhamento} dias de acompanhamento` : 'Inicio do acompanhamento'}</Text>
           <View style={s.badge}>
-            <Text style={s.badgeText}>{analise.emojiStatus}  {analise.fraseStatus}</Text>
+            <Text style={s.badgeText}>{t(analise.fraseStatus)}</Text>
           </View>
         </View>
 
@@ -325,14 +346,14 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
             <Text style={[s.metricaValor, { color: dados.aderencia >= 70 ? C.verde : C.amarelo }]}>
               {dados.aderencia}%
             </Text>
-            <Text style={s.metricaLabel}>Aderência</Text>
+            <Text style={s.metricaLabel}>Aderencia</Text>
           </View>
           {dados.scoreHabitos != null && (
             <View style={s.metricaItem}>
               <Text style={[s.metricaValor, { color: dados.scoreHabitos >= 6 ? C.verde : C.amarelo }]}>
                 {dados.scoreHabitos}/10
               </Text>
-              <Text style={s.metricaLabel}>Score Hábitos</Text>
+              <Text style={s.metricaLabel}>Score Habitos</Text>
             </View>
           )}
           {dados.pesoAtual != null && (
@@ -361,20 +382,20 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
           {/* Objetivo */}
           {dados.objetivo && (
             <View style={s.objetivoBox}>
-              <Text style={s.objetivoTexto}>🎯  Objetivo: {dados.objetivo}</Text>
+              <Text style={s.objetivoTexto}>Objetivo: {t(dados.objetivo)}</Text>
             </View>
           )}
 
           {/* Resumo analítico */}
           <View style={s.resumoBox}>
-            <Text style={s.resumoTexto}>{analise.paragrafoResumo}</Text>
+            <Text style={s.resumoTexto}>{t(analise.paragrafoResumo)}</Text>
           </View>
 
           {/* Conquistas + Atenção em grid */}
           <View style={s.grid2}>
             {analise.conquistas.length > 0 && (
               <View style={s.col}>
-                <Text style={s.secaoTitulo}>🏆 Conquistas do período</Text>
+                <Text style={s.secaoTitulo}>Conquistas do periodo</Text>
                 {analise.conquistas.map((c, i) => (
                   <CardInsight key={i} {...c} />
                 ))}
@@ -382,7 +403,7 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
             )}
             {analise.atencao.length > 0 && (
               <View style={s.col}>
-                <Text style={s.secaoTitulo}>📌 Pontos de atenção</Text>
+                <Text style={s.secaoTitulo}>Pontos de atencao</Text>
                 {analise.atencao.map((c, i) => (
                   <CardInsight key={i} {...c} />
                 ))}
@@ -399,7 +420,7 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
             if (!detalhados.length) return null;
             return (
               <>
-                <Text style={s.secaoTitulo}>📊 Análise detalhada</Text>
+                <Text style={s.secaoTitulo}>Analise detalhada</Text>
                 {detalhados.map((i, idx) => <CardInsight key={idx} {...i} />)}
               </>
             );
@@ -409,55 +430,55 @@ export function RelatorioPDF({ dados, analise, mes, nomeNutricionista }: Props) 
           {dados.inicial && dados.atual && (
             <>
               <View style={s.divisor} />
-              <Text style={s.secaoTitulo}>🥗 Evolução dos grupos alimentares</Text>
+              <Text style={s.secaoTitulo}>Evolucao dos grupos alimentares</Text>
               {[
-                { label: '🍎 Frutas',     ini: dados.inicial.frutas,    atu: dados.atual.frutas },
-                { label: '🥬 Verduras',   ini: dados.inicial.verduras,  atu: dados.atual.verduras },
-                { label: '🥕 Legumes',    ini: dados.inicial.legumes,   atu: dados.atual.legumes },
-                { label: '🍗 Proteínas',  ini: dados.inicial.proteinas, atu: dados.atual.proteinas },
-                { label: '🌾 Cereais',    ini: dados.inicial.cereais,   atu: dados.atual.cereais },
-                { label: '💧 Hidratação', ini: dados.inicial.agua,      atu: dados.atual.agua },
+                { label: 'Frutas',     ini: dados.inicial.frutas,    atu: dados.atual.frutas },
+                { label: 'Verduras',   ini: dados.inicial.verduras,  atu: dados.atual.verduras },
+                { label: 'Legumes',    ini: dados.inicial.legumes,   atu: dados.atual.legumes },
+                { label: 'Proteinas',  ini: dados.inicial.proteinas, atu: dados.atual.proteinas },
+                { label: 'Cereais',    ini: dados.inicial.cereais,   atu: dados.atual.cereais },
+                { label: 'Hidratacao', ini: dados.inicial.agua,      atu: dados.atual.agua },
               ].map(g => <BarraGrupo key={g.label} {...g} />)}
 
-              <Text style={s.secaoTitulo}>⚠️ Hábitos inadequados</Text>
+              <Text style={s.secaoTitulo}>Habitos inadequados</Text>
               {[
-                { label: '🥤 Refrigerantes',     ini: dados.inicial.refrigerantes,    atu: dados.atual.refrigerantes },
-                { label: '🍬 Doces',             ini: dados.inicial.doces,            atu: dados.atual.doces },
-                { label: '🍔 Fast-food',         ini: dados.inicial.fastFood,         atu: dados.atual.fastFood },
-                { label: '📦 Ultraprocessados',  ini: dados.inicial.ultraprocessados, atu: dados.atual.ultraprocessados },
-                { label: '🍿 Beliscos',          ini: dados.inicial.beliscos,         atu: dados.atual.beliscos },
+                { label: 'Refrigerantes',    ini: dados.inicial.refrigerantes,    atu: dados.atual.refrigerantes },
+                { label: 'Doces',            ini: dados.inicial.doces,            atu: dados.atual.doces },
+                { label: 'Fast-food',        ini: dados.inicial.fastFood,         atu: dados.atual.fastFood },
+                { label: 'Ultraprocessados', ini: dados.inicial.ultraprocessados, atu: dados.atual.ultraprocessados },
+                { label: 'Beliscos',         ini: dados.inicial.beliscos,         atu: dados.atual.beliscos },
               ].map(g => (
                 // Para hábitos inadequados, redução é positivo
                 <BarraGrupo key={g.label} label={g.label} ini={g.ini} atu={g.atu} />
               ))}
-              <Text style={s.notaTabela}>Escala de 0 a 10 — comparativo entre avaliação inicial e mais recente. Para hábitos inadequados, valores menores são melhores.</Text>
+              <Text style={s.notaTabela}>Escala de 0 a 10 - comparativo entre avaliacao inicial e mais recente. Para habitos inadequados, valores menores sao melhores.</Text>
             </>
           )}
 
           {/* Próximos passos */}
           <View style={s.divisor} />
-          <Text style={s.secaoTitulo}>🎯 Próximos passos recomendados</Text>
+          <Text style={s.secaoTitulo}>Proximos passos recomendados</Text>
           <View style={{ backgroundColor: C.cinza4, borderRadius: 6, padding: 12, marginBottom: 16 }}>
             {analise.proximosPassos.map((p, i) => (
               <View key={i} style={s.passoRow}>
-                <Text style={s.passoSeta}>→</Text>
-                <Text style={s.passoTexto}>{p}</Text>
+                <Text style={s.passoSeta}>-&gt;</Text>
+                <Text style={s.passoTexto}>{t(p)}</Text>
               </View>
             ))}
           </View>
 
           {/* Conclusão */}
-          <Text style={s.secaoTitulo}>📝 Parecer da nutricionista</Text>
+          <Text style={s.secaoTitulo}>Parecer da nutricionista</Text>
           <View style={s.conclusaoBox}>
-            <Text style={s.conclusaoTexto}>{analise.conclusao}</Text>
+            <Text style={s.conclusaoTexto}>{t(analise.conclusao)}</Text>
           </View>
 
         </View>
 
         {/* ── FOOTER ── */}
         <View style={s.footer} fixed>
-          <Text style={s.footerTexto}>Relatório gerado em {dataGeracao} via NutriHub</Text>
-          <Text style={s.footerTexto}>{nomeNutricionista}</Text>
+          <Text style={s.footerTexto}>Relatorio gerado em {dataGeracao} via NutriHub</Text>
+          <Text style={s.footerTexto}>{t(nomeNutricionista)}</Text>
         </View>
 
       </Page>

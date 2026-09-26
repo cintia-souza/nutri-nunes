@@ -75,6 +75,11 @@ function classificarIMC(v: number): string {
   return 'obesidade grau II ou mais';
 }
 
+function imcDesc(peso: number, altura: number): string {
+  const v = imc(peso, altura);
+  return ` (IMC ${v} - ${classificarIMC(v)})`;
+}
+
 function primeiroNome(nome: string) {
   return nome.split(' ')[0];
 }
@@ -111,17 +116,17 @@ export function analisarRelatorio(d: DadosAnalise): Analise {
     const perdeu = diffPeso < 0;
     const ganhou = diffPeso > 0;
     const imcAtual = d.altura ? imc(d.pesoAtual, d.altura) : null;
-    const imcDesc = imcAtual ? ` (IMC ${imcAtual} — ${classificarIMC(imcAtual)})` : '';
+    const imcDescStr = imcAtual ? imcDesc(d.pesoAtual, d.altura!) : '';
 
     analisePeso = {
       emoji: perdeu ? '📉' : ganhou ? '📈' : '⚖️',
       nivel: perdeu ? 'positivo' : ganhou ? 'atencao' : 'neutro',
-      titulo: `Peso: ${d.pesoAtual} kg${imcDesc}`,
+      titulo: `Peso: ${d.pesoAtual} kg${imcDescStr}`,
       descricao: perdeu
-        ? `${nome} reduziu ${Math.abs(diffPeso)} kg desde o início do acompanhamento, passando de ${d.pesoInicial} kg para ${d.pesoAtual} kg${imcDesc}. Essa redução é resultado direto da melhora nos hábitos alimentares.`
+        ? `${nome} reduziu ${Math.abs(diffPeso)} kg desde o inicio do acompanhamento, passando de ${d.pesoInicial} kg para ${d.pesoAtual} kg${imcDescStr}. Essa reducao e resultado direto da melhora nos habitos alimentares.`
         : ganhou
-        ? `O peso de ${nome} aumentou ${diffPeso} kg em relação ao início (${d.pesoInicial} kg → ${d.pesoAtual} kg)${imcDesc}. Vale avaliar se esse ganho é esperado dentro do objetivo do tratamento.`
-        : `O peso de ${nome} se manteve estável em ${d.pesoAtual} kg${imcDesc}. A manutenção do peso pode ser um objetivo positivo dependendo do plano traçado.`,
+        ? `O peso de ${nome} aumentou ${diffPeso} kg em relacao ao inicio (${d.pesoInicial} kg -> ${d.pesoAtual} kg)${imcDescStr}. Vale avaliar se esse ganho e esperado dentro do objetivo do tratamento.`
+        : `O peso de ${nome} se manteve estavel em ${d.pesoAtual} kg${imcDescStr}. A manutencao do peso pode ser um objetivo positivo dependendo do plano tracado.`,
     };
 
     if (perdeu && Math.abs(diffPeso) >= 1) conquistas.push(analisePeso);
