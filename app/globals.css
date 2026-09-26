@@ -315,3 +315,22 @@ body {
   box-shadow: 0 8px 40px rgba(26,133,88,0.35);
   color: white;
 }
+
+/* ── IMPRESSÃO / PDF ── */
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Oculta sidebar, header e botões */
+  nav, aside, header, .print-hidden { display: none !important; }
+
+  body { background: white !important; }
+
+  /* Área de impressão ocupa tudo */
+  main { max-width: 100% !important; padding: 16px !important; }
+
+  /* Evita quebra dentro de cards */
+  section, .print-no-break { break-inside: avoid; }
+
+  /* Quebra de página explícita */
+  .print-break-before { break-before: page; }
+}

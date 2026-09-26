@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import RelatorioPDFActions from '@/components/RelatorioPDFActions';
 
 const GruposAlimentaresChart = dynamic(() => import('@/components/RelatorioCharts').then(m => m.GruposAlimentaresChart), { ssr: false, loading: () => <ChartSkeleton /> });
 const HabitosInadequadosChart = dynamic(() => import('@/components/RelatorioCharts').then(m => m.HabitosInadequadosChart), { ssr: false, loading: () => <ChartSkeleton /> });
@@ -149,7 +150,7 @@ function RelatorioContent() {
             <p className="text-warm-500 text-sm mt-0.5">{data.cliente.objetivo || 'Acompanhamento nutricional'}</p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap print-hidden">
           <Link href={`/admin/avaliacao-nutricional?clienteId=${clienteId}`}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white min-h-[40px] shadow-md hover:shadow-lg hover:scale-[1.02] transition-all"
             style={{background:'linear-gradient(135deg,#059669,#047857)'}}>
@@ -159,6 +160,11 @@ function RelatorioContent() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-cream-200 text-warm-600 hover:bg-cream-50 min-h-[40px] transition-all">
             📊 Hábitos
           </Link>
+          <RelatorioPDFActions
+            clienteId={clienteId}
+            clienteEmail={data.cliente.email}
+            clienteNome={data.cliente.nome}
+          />
         </div>
       </div>
 
