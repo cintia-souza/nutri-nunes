@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { enviarEmail } from '@/lib/email';
+import { analisarRelatorio, type DadosAnalise, type Analise } from '@/lib/analise-relatorio';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -15,9 +16,9 @@ export async function POST(req: NextRequest) {
   const [cliente, progressos, checks, avaliacoes, habitos] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: clienteId },
-      select: { nome: true, email: true, pesoAtual: true, altura: true, objetivo: true },
+      select: { nome: true, email: true, pesoAtual: true, altura: true, objetivo: true, criadoEm: true },
     }),
-    prisma.registroProgresso.findMany({ where: { clienteId }, orderBy: { data: 'desc' }, take: 10 }),
+    prisma.registroProgresso.findMany({ where: { clienteId }, orderBy: { data: 'asc' } }),
     prisma.checkRefeicao.findMany({ where: { clienteId }, orderBy: { data: 'desc' }, take: 90 }),
     prisma.avaliacaoNutricional.findMany({ where: { clienteId }, orderBy: { data: 'asc' } }),
     prisma.registroHabito.findMany({ where: { clienteId }, orderBy: { data: 'desc' }, take: 30 }),
@@ -25,39 +26,54 @@ export async function POST(req: NextRequest) {
 
   if (!cliente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 });
 
-  // Métricas resumidas
   const totalChecks = checks.length;
   const realizados = checks.filter(c => c.realizada).length;
   const aderencia = totalChecks > 0 ? Math.round((realizados / totalChecks) * 100) : 0;
 
-  const pesoAtual = progressos.find(p => p.peso)?.peso;
-  const pesoAnterior = progressos.filter(p => p.peso)[1]?.peso;
-  const diffPeso = pesoAtual && pesoAnterior ? (pesoAtual - pesoAnterior).toFixed(1) : null;
+  const pesosOrdenados = progressos.filter(p => p.peso);
+  const pesoAtual = pesosOrdenados[pesosOrdenados.length - 1]?.peso ?? cliente.pesoAtual;
+  const pesoInicial = pesosOrdenados[0]?.peso;
 
   const scoreHabitos = habitos.length > 0
-    ? +(habitos.slice(0, 10).reduce((s, h) =>
+    ? +(habitos.slice(0, 14).reduce((s, h) =>
         s + (h.aderenciaDieta + h.variedadeAlimentar + h.aceitacaoNovos + h.hidratacao + h.comportamentoMesa) / 5, 0
-      ) / Math.min(habitos.length, 10)).toFixed(1)
+      ) / Math.min(habitos.length, 14)).toFixed(1)
     : null;
 
-  const inicial = avaliacoes.find(a => a.tipo === 'INICIAL');
+  const hidratacaoMedia = habitos.length > 0
+    ? Math.round(progressos.filter(p => p.aguaMl).reduce((s, p) => s + (p.aguaMl ?? 0), 0) / Math.max(progressos.filter(p => p.aguaMl).length, 1))
+    : null;
+
+  const inicial = avaliacoes.find(a => a.tipo === 'INICIAL') ?? null;
   const atual = avaliacoes.length > 0 ? avaliacoes[avaliacoes.length - 1] : null;
 
-  const html = gerarHtmlRelatorio({
+  const diasAcompanhamento = cliente.criadoEm
+    ? Math.floor((Date.now() - new Date(cliente.criadoEm).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  const dadosAnalise: DadosAnalise = {
     nome: cliente.nome,
     objetivo: cliente.objetivo,
-    aderencia,
     pesoAtual,
-    diffPeso,
+    pesoInicial,
+    altura: cliente.altura,
+    aderencia,
     scoreHabitos,
+    hidratacaoMedia,
     inicial,
     atual,
     totalAvaliacoes: avaliacoes.length,
-  });
+    diasAcompanhamento,
+  };
+
+  const analise = analisarRelatorio(dadosAnalise);
+  const mes = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const html = gerarHtml(cliente.nome, mes, dadosAnalise, analise);
 
   const ok = await enviarEmail({
     to: cliente.email,
-    subject: `Seu Relatório de Evolução — ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`,
+    subject: `Seu Relatório de Evolução — ${mes}`,
     html,
   });
 
@@ -65,130 +81,160 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// ── Template HTML do email ────────────────────────────────────────────────────
-
-interface TemplateData {
-  nome: string;
-  objetivo?: string | null;
-  aderencia: number;
-  pesoAtual?: number | null;
-  diffPeso?: string | null;
-  scoreHabitos?: number | null;
-  inicial?: { frutas: number; verduras: number; legumes: number; proteinas: number; agua: number } | null;
-  atual?: { frutas: number; verduras: number; legumes: number; proteinas: number; agua: number } | null;
-  totalAvaliacoes: number;
-}
+// ── Template HTML ─────────────────────────────────────────────────────────────
 
 function esc(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function barraProgresso(valor: number, max: number, cor: string) {
+function barra(valor: number, max: number, cor: string) {
   const pct = Math.min(Math.round((valor / max) * 100), 100);
+  return `<div style="background:#eee;border-radius:99px;height:6px;margin-top:5px;"><div style="background:${cor};width:${pct}%;height:6px;border-radius:99px;"></div></div>`;
+}
+
+function cardInsight(emoji: string, titulo: string, descricao: string, cor: string, bg: string) {
   return `
-    <div style="background:#f0f0f0;border-radius:99px;height:8px;margin-top:4px;">
-      <div style="background:${cor};width:${pct}%;height:8px;border-radius:99px;"></div>
+    <div style="border-radius:12px;padding:16px;margin-bottom:12px;background:${bg};border-left:4px solid ${cor};">
+      <p style="margin:0 0 6px;font-weight:700;color:#28251f;font-size:14px;">${emoji} ${esc(titulo)}</p>
+      <p style="margin:0;color:#5c5650;font-size:13px;line-height:1.6;">${esc(descricao)}</p>
     </div>`;
 }
 
-function gerarHtmlRelatorio(d: TemplateData): string {
-  const nome = esc(d.nome.split(' ')[0]);
-  const mes = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+function gerarHtml(nomeCompleto: string, mes: string, d: DadosAnalise, a: Analise): string {
+  const nome = esc(nomeCompleto.split(' ')[0]);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nutrihub-plataforma.vercel.app';
 
-  const pesoRow = d.pesoAtual ? `
-    <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #f0ede8;">
-        <span style="color:#7d7670;font-size:13px;">⚖️ Peso atual</span>
-      </td>
-      <td style="padding:10px 0;border-bottom:1px solid #f0ede8;text-align:right;">
-        <strong style="color:#28251f;">${d.pesoAtual} kg</strong>
-        ${d.diffPeso ? `<span style="color:${Number(d.diffPeso) <= 0 ? '#059669' : '#d97706'};font-size:12px;margin-left:6px;">(${Number(d.diffPeso) > 0 ? '+' : ''}${d.diffPeso} kg)</span>` : ''}
-      </td>
-    </tr>` : '';
-
-  const scoreRow = d.scoreHabitos ? `
-    <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #f0ede8;">
-        <span style="color:#7d7670;font-size:13px;">🎯 Score de hábitos</span>
-      </td>
-      <td style="padding:10px 0;border-bottom:1px solid #f0ede8;text-align:right;">
-        <strong style="color:#28251f;">${d.scoreHabitos}/10</strong>
-      </td>
-    </tr>` : '';
-
-  const gruposSection = d.inicial && d.atual ? `
-    <div style="margin-top:24px;">
-      <p style="font-weight:600;color:#28251f;margin-bottom:12px;">📊 Grupos Alimentares (inicial → atual)</p>
-      ${[
-        { label: '🍎 Frutas', ini: d.inicial.frutas, atu: d.atual.frutas },
-        { label: '🥬 Verduras', ini: d.inicial.verduras, atu: d.atual.verduras },
-        { label: '🥕 Legumes', ini: d.inicial.legumes, atu: d.atual.legumes },
-        { label: '🍗 Proteínas', ini: d.inicial.proteinas, atu: d.atual.proteinas },
-        { label: '💧 Água', ini: d.inicial.agua, atu: d.atual.agua },
-      ].map(g => {
-        const diff = g.atu - g.ini;
-        const cor = diff >= 0 ? '#059669' : '#d97706';
-        return `
-          <div style="margin-bottom:10px;">
-            <div style="display:flex;justify-content:space-between;font-size:13px;">
-              <span style="color:#5c5650;">${g.label}</span>
-              <span style="color:${cor};font-weight:600;">${g.ini} → ${g.atu} ${diff > 0 ? `(+${diff})` : diff < 0 ? `(${diff})` : ''}</span>
-            </div>
-            ${barraProgresso(g.atu, 10, cor)}
-          </div>`;
-      }).join('')}
+  // Seção de conquistas
+  const conquistasHtml = a.conquistas.length > 0 ? `
+    <div style="margin-bottom:24px;">
+      <p style="font-weight:700;color:#28251f;font-size:15px;margin:0 0 12px;">🏆 Conquistas do período</p>
+      ${a.conquistas.map(c => cardInsight(c.emoji, c.titulo, c.descricao, '#059669', '#f0fdf4')).join('')}
     </div>` : '';
 
-  return `
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-    <body style="margin:0;padding:0;background:#f5f3ef;font-family:'Helvetica Neue',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  // Seção de atenção
+  const atencaoHtml = a.atencao.length > 0 ? `
+    <div style="margin-bottom:24px;">
+      <p style="font-weight:700;color:#28251f;font-size:15px;margin:0 0 12px;">📌 Pontos de atenção</p>
+      ${a.atencao.map(c => cardInsight(c.emoji, c.titulo, c.descricao, '#d97706', '#fffbeb')).join('')}
+    </div>` : '';
 
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#0f3d29,#1a8558);padding:32px 32px 24px;">
-          <p style="color:rgba(255,255,255,0.6);font-size:11px;text-transform:uppercase;letter-spacing:3px;margin:0 0 8px;">Relatório de Evolução</p>
-          <h1 style="color:white;font-size:22px;margin:0 0 4px;">Olá, ${nome}! 🌱</h1>
-          <p style="color:rgba(255,255,255,0.7);font-size:14px;margin:0;">${mes}</p>
-        </div>
+  // Análise detalhada
+  const insightsDetalhados = [a.analiseAderencia, a.analisePeso, a.analiseHabitos, a.analiseAlimentacao]
+    .filter(Boolean)
+    .map(i => i!)
+    .filter(i => !a.conquistas.includes(i) && !a.atencao.includes(i))
+    .map(i => cardInsight(i.emoji, i.titulo, i.descricao,
+      i.nivel === 'positivo' ? '#059669' : i.nivel === 'atencao' ? '#d97706' : '#6b7280',
+      i.nivel === 'positivo' ? '#f0fdf4' : i.nivel === 'atencao' ? '#fffbeb' : '#f9fafb',
+    )).join('');
 
-        <!-- Corpo -->
-        <div style="padding:28px 32px;">
-          ${d.objetivo ? `<p style="color:#5c5650;font-size:14px;margin:0 0 20px;padding:12px 16px;background:#f0faf5;border-radius:10px;border-left:3px solid #22a06b;">🎯 Objetivo: <strong>${esc(d.objetivo)}</strong></p>` : ''}
-
-          <!-- Métricas -->
-          <table style="width:100%;border-collapse:collapse;">
+  // Grupos alimentares
+  const gruposHtml = d.inicial && d.atual ? `
+    <div style="margin-bottom:24px;">
+      <p style="font-weight:700;color:#28251f;font-size:15px;margin:0 0 12px;">🥗 Evolução dos grupos alimentares</p>
+      <table style="width:100%;border-collapse:collapse;">
+        ${[
+          { label: '🍎 Frutas', ini: d.inicial.frutas, atu: d.atual.frutas },
+          { label: '🥬 Verduras', ini: d.inicial.verduras, atu: d.atual.verduras },
+          { label: '🥕 Legumes', ini: d.inicial.legumes, atu: d.atual.legumes },
+          { label: '🍗 Proteínas', ini: d.inicial.proteinas, atu: d.atual.proteinas },
+          { label: '💧 Hidratação', ini: d.inicial.agua, atu: d.atual.agua },
+        ].map(g => {
+          const diff = g.atu - g.ini;
+          const cor = diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#6b7280';
+          const sinal = diff > 0 ? `+${diff}` : `${diff}`;
+          return `
             <tr>
-              <td style="padding:10px 0;border-bottom:1px solid #f0ede8;">
-                <span style="color:#7d7670;font-size:13px;">✅ Aderência à dieta</span>
-                ${barraProgresso(d.aderencia, 100, d.aderencia >= 70 ? '#059669' : '#d97706')}
-              </td>
-              <td style="padding:10px 0;border-bottom:1px solid #f0ede8;text-align:right;vertical-align:top;">
-                <strong style="color:#28251f;font-size:18px;">${d.aderencia}%</strong>
-              </td>
-            </tr>
-            ${pesoRow}
-            ${scoreRow}
-          </table>
+              <td style="padding:8px 0;font-size:13px;color:#5c5650;width:40%;">${g.label}</td>
+              <td style="padding:8px 0;width:45%;">${barra(g.atu, 10, cor)}</td>
+              <td style="padding:8px 0;text-align:right;font-size:13px;font-weight:700;color:${cor};width:15%;">${diff !== 0 ? sinal : '='}</td>
+            </tr>`;
+        }).join('')}
+      </table>
+      <p style="font-size:11px;color:#a8a099;margin:8px 0 0;">Escala de 0 a 10 — comparativo entre avaliação inicial e mais recente</p>
+    </div>` : '';
 
-          ${gruposSection}
+  // Próximos passos
+  const passosHtml = `
+    <div style="margin-bottom:24px;background:#f8f5f0;border-radius:12px;padding:16px;">
+      <p style="font-weight:700;color:#28251f;font-size:15px;margin:0 0 12px;">🎯 Próximos passos recomendados</p>
+      ${a.proximosPassos.map(p => `
+        <div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start;">
+          <span style="color:#22a06b;font-weight:700;font-size:16px;line-height:1.4;">→</span>
+          <p style="margin:0;font-size:13px;color:#5c5650;line-height:1.6;">${esc(p)}</p>
+        </div>`).join('')}
+    </div>`;
 
-          <!-- CTA -->
-          <div style="margin-top:28px;text-align:center;">
-            <p style="color:#7d7670;font-size:13px;margin-bottom:16px;">Acesse o app para ver seu relatório completo com gráficos.</p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://nutrihub-plataforma.vercel.app'}/adriana/cliente"
-              style="display:inline-block;background:linear-gradient(135deg,#22a06b,#166947);color:white;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:600;font-size:14px;">
-              Ver relatório completo →
-            </a>
-          </div>
-        </div>
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f3ef;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:580px;margin:32px auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-        <!-- Footer -->
-        <div style="padding:16px 32px;background:#faf8f4;border-top:1px solid #ede9e2;text-align:center;">
-          <p style="color:#a8a099;font-size:12px;margin:0;">Enviado pela sua nutricionista via NutriHub</p>
-        </div>
-      </div>
-    </body>
-    </html>`;
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0f3d29,#1a8558);padding:32px 32px 28px;">
+    <p style="color:rgba(255,255,255,0.55);font-size:11px;text-transform:uppercase;letter-spacing:3px;margin:0 0 8px;">Relatório de Evolução</p>
+    <h1 style="color:white;font-size:24px;margin:0 0 6px;font-weight:700;">Olá, ${nome}! ${a.emojiStatus}</h1>
+    <p style="color:rgba(255,255,255,0.7);font-size:14px;margin:0 0 16px;">${mes}</p>
+    <!-- Status badge -->
+    <div style="display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:99px;padding:6px 16px;">
+      <span style="color:white;font-size:13px;font-weight:600;">${a.fraseStatus}</span>
+    </div>
+  </div>
+
+  <!-- Métricas rápidas -->
+  <div style="display:flex;background:#faf8f4;border-bottom:1px solid #ede9e2;">
+    <div style="flex:1;padding:16px;text-align:center;border-right:1px solid #ede9e2;">
+      <p style="margin:0;font-size:22px;font-weight:700;color:${d.aderencia >= 70 ? '#059669' : '#d97706'};">${d.aderencia}%</p>
+      <p style="margin:4px 0 0;font-size:11px;color:#a8a099;text-transform:uppercase;letter-spacing:1px;">Aderência</p>
+    </div>
+    ${d.scoreHabitos ? `
+    <div style="flex:1;padding:16px;text-align:center;border-right:1px solid #ede9e2;">
+      <p style="margin:0;font-size:22px;font-weight:700;color:${d.scoreHabitos >= 6 ? '#059669' : '#d97706'};">${d.scoreHabitos}/10</p>
+      <p style="margin:4px 0 0;font-size:11px;color:#a8a099;text-transform:uppercase;letter-spacing:1px;">Hábitos</p>
+    </div>` : ''}
+    ${d.pesoAtual ? `
+    <div style="flex:1;padding:16px;text-align:center;">
+      <p style="margin:0;font-size:22px;font-weight:700;color:#28251f;">${d.pesoAtual} kg</p>
+      <p style="margin:4px 0 0;font-size:11px;color:#a8a099;text-transform:uppercase;letter-spacing:1px;">Peso atual</p>
+    </div>` : ''}
+  </div>
+
+  <!-- Corpo -->
+  <div style="padding:28px 32px;">
+
+    <!-- Resumo analítico -->
+    <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:24px;border-left:4px solid #22a06b;">
+      <p style="margin:0;font-size:14px;color:#166947;line-height:1.7;">${esc(a.paragrafoResumo)}</p>
+    </div>
+
+    ${conquistasHtml}
+    ${atencaoHtml}
+    ${insightsDetalhados ? `<div style="margin-bottom:24px;">${insightsDetalhados}</div>` : ''}
+    ${gruposHtml}
+    ${passosHtml}
+
+    <!-- Conclusão -->
+    <div style="margin-bottom:24px;padding:16px;background:#faf8f4;border-radius:12px;">
+      <p style="font-weight:700;color:#28251f;font-size:15px;margin:0 0 8px;">📝 Análise da nutricionista</p>
+      <p style="margin:0;font-size:13px;color:#5c5650;line-height:1.7;">${esc(a.conclusao)}</p>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:8px;">
+      <p style="color:#7d7670;font-size:13px;margin-bottom:16px;">Acesse o app para ver seus gráficos e registrar novos dados.</p>
+      <a href="${appUrl}/adriana/cliente"
+        style="display:inline-block;background:linear-gradient(135deg,#22a06b,#166947);color:white;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:14px;">
+        Acessar meu portal →
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:16px 32px;background:#faf8f4;border-top:1px solid #ede9e2;text-align:center;">
+    <p style="color:#a8a099;font-size:12px;margin:0;">Relatório gerado automaticamente pela sua nutricionista via NutriHub</p>
+  </div>
+</div>
+</body>
+</html>`;
 }
