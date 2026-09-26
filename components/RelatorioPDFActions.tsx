@@ -14,8 +14,28 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState('');
 
-  function handlePrint() {
-    window.open(`/api/admin/relatorio/pdf?clienteId=${clienteId}`, '_blank');
+  const [baixando, setBaixando] = useState(false);
+  const [erroPdf, setErroPdf] = useState('');
+
+  async function handlePrint() {
+    setBaixando(true);
+    setErroPdf('');
+    try {
+      const res = await fetch(`/api/admin/relatorio/pdf?clienteId=${clienteId}`);
+      if (!res.ok) throw new Error(`Erro ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio-${clienteNome.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErroPdf('Erro ao gerar PDF. Tente novamente.');
+      setTimeout(() => setErroPdf(''), 4000);
+    } finally {
+      setBaixando(false);
+    }
   }
 
   async function handleEmail() {
@@ -44,10 +64,11 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
       {/* Botão PDF */}
       <button
         onClick={handlePrint}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-cream-200 text-warm-600 hover:bg-cream-50 min-h-[40px] transition-all"
+        disabled={baixando}
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-cream-200 text-warm-600 hover:bg-cream-50 min-h-[40px] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <FileDown className="w-4 h-4" />
-        Baixar PDF
+        {baixando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+        {baixando ? 'Gerando PDF...' : 'Baixar PDF'}
       </button>
 
       {/* Botão Email */}
@@ -68,8 +89,8 @@ export default function RelatorioPDFActions({ clienteId, clienteEmail, clienteNo
         {enviando ? 'Enviando...' : enviado ? 'Enviado!' : 'Enviar por email'}
       </button>
 
-      {erro && (
-        <span className="text-xs text-red-500 font-medium">{erro}</span>
+      {(erro || erroPdf) && (
+        <span className="text-xs text-red-500 font-medium">{erro || erroPdf}</span>
       )}
     </div>
   );

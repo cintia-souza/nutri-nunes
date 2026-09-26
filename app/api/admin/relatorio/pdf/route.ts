@@ -6,6 +6,9 @@ import { getSession } from '@/lib/auth';
 import { analisarRelatorio, type DadosAnalise } from '@/lib/analise-relatorio';
 import { RelatorioPDF } from '@/components/RelatorioPDFDoc';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) {
