@@ -72,12 +72,12 @@ export async function GET(req: NextRequest) {
   const nomeNutricionista = nutricionista?.nome ?? 'Nutricionista';
 
   const buffer = await renderToBuffer(
-    React.createElement(RelatorioPDF, { dados: dadosAnalise, analise, mes, nomeNutricionista })
+    React.createElement(RelatorioPDF, { dados: dadosAnalise, analise, mes, nomeNutricionista }) as React.ReactElement<import('@react-pdf/renderer').DocumentProps>
   );
 
   const nomeArquivo = `relatorio-${cliente.nome.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.pdf`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${nomeArquivo}"`,

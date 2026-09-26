@@ -253,7 +253,7 @@ export function analisarRelatorio(d: DadosAnalise): Analise {
   if (d.aderencia < 70) proximosPassos.push('Identificar os horários de maior dificuldade e adaptar o plano alimentar');
   if (d.scoreHabitos && d.scoreHabitos < 6) proximosPassos.push('Focar em um hábito por semana para consolidar mudanças graduais');
   if (d.inicial && d.atual) {
-    const baixos = ['frutas','verduras','legumes'].filter(k => (d.atual as Record<string,number>)[k] <= 3);
+    const baixos = ['frutas','verduras','legumes'].filter(k => (d.atual! as unknown as Record<string,number>)[k] <= 3);
     if (baixos.length > 0) proximosPassos.push(`Aumentar gradualmente o consumo de ${baixos.join(' e ')}`);
     if (d.atual.refrigerantes >= 3) proximosPassos.push('Reduzir o consumo de refrigerantes — substituir por água com limão ou chás');
     if (d.atual.ultraprocessados >= 3) proximosPassos.push('Diminuir ultraprocessados — planejar lanches saudáveis com antecedência');
